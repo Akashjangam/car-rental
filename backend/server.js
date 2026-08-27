@@ -1,45 +1,38 @@
-require("dotenv").config();
-
 const express = require("express");
-const cors = require("cors");
-
+const dotenv = require("dotenv");
 const connectDB = require("./config/db");
-const carRoutes = require("./routes/carRoutes");
+
 const authRoutes = require("./routes/authRoutes");
+const carRoutes = require("./routes/carRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
-const protect = require("./middleware/authMiddleware");
+const adminRoutes = require("./routes/adminRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+
+dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Connect to MongoDB
+// Connect Database
 connectDB();
 
-// Test route
-app.get("/", (req, res) => {
-  res.send("Car Rental API is running");
-});
+// Middleware
+app.use(express.json());
 
-// Protected profile route
-app.get("/api/profile", protect, (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Protected route accessed successfully",
-    user: req.user,
-  });
-});
-
-// API Routes
-app.use("/api/cars", carRoutes);
+// Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/cars", carRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/payments", paymentRoutes);
 
-// Start server
+// Test Route
+app.get("/", (req, res) => {
+  res.send("Car Rental API is running...");
+});
+
+// Start Server
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
