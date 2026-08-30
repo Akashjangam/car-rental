@@ -1,9 +1,9 @@
 const Payment = require("../models/payment");
 const Booking = require("../models/Booking");
 
-// =================================
+
 // CREATE MOCK PAYMENT
-// =================================
+
 const createPayment = async (req, res) => {
   try {
     const { bookingId, paymentMethod } = req.body;
@@ -36,7 +36,7 @@ const createPayment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Payment already completed for this booking",
-      });
+      }); 
     }
 
     // Create successful mock payment
@@ -67,9 +67,9 @@ const createPayment = async (req, res) => {
   }
 };
 
-// =================================
+
 // GET MY PAYMENTS
-// =================================
+
 const getMyPayments = async (req, res) => {
   try {
     const payments = await Payment.find({
@@ -97,9 +97,9 @@ const getMyPayments = async (req, res) => {
   }
 };
 
-// =================================
+
 // GET ALL PAYMENTS - ADMIN
-// =================================
+
 const getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find()

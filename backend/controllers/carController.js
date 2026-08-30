@@ -1,9 +1,8 @@
 const Car = require("../models/Car");
 
-// =================================
 // GET ALL CARS
-// SEARCH + FILTERS + PAGINATION + SORTING
-// =================================
+// SEARCH , FILTERS , PAGINATION , SORTING
+
 const getCars = async (req, res) => {
   try {
     const {
@@ -103,9 +102,8 @@ const getCars = async (req, res) => {
   }
 };
 
-// =================================
 // GET SINGLE CAR
-// =================================
+
 const getCarById = async (req, res) => {
   try {
     const car = await Car.findById(req.params.id);
@@ -129,9 +127,9 @@ const getCarById = async (req, res) => {
   }
 };
 
-// =================================
+
 // CREATE CAR - ADMIN
-// =================================
+
 const createCar = async (req, res) => {
   try {
     const {
@@ -205,9 +203,9 @@ const updateCar = async (req, res) => {
   }
 };
 
-// =================================
+
 // DELETE CAR - ADMIN
-// =================================
+
 const deleteCar = async (req, res) => {
   try {
     const car = await Car.findByIdAndDelete(req.params.id);
