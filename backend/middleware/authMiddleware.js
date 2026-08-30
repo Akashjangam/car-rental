@@ -8,12 +8,12 @@ const protect = async (req, res, next) => {
     // Check Authorization header
     if (
       req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
+      req.headers.authorization.startsWith("Bearer ")
     ) {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    // No token
+    // Token missing
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -22,21 +22,32 @@ const protect = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
 
-    // Get user without password
-    req.user = await User.findById(decoded.id).select("-password");
+    // Get current user from database
+    const user = await User.findById(decoded.id).select(
+      "-password"
+    );
 
-    if (!req.user) {
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: "User not found",
       });
     }
 
+    // IMPORTANT
+    // This contains role: admin
+    req.user = user;
+
     next();
   } catch (error) {
-    res.status(401).json({
+    console.error("Auth error:", error.message);
+
+    return res.status(401).json({
       success: false,
       message: "Not authorized. Invalid token",
     });

@@ -1,12 +1,24 @@
-const admin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
-    next();
-  } else {
-    res.status(403).json({
+const adminMiddleware = (
+  req,
+  res,
+  next
+) => {
+
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Not authenticated",
+    });
+  }
+
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
       success: false,
       message: "Admin access required",
     });
   }
+
+  next();
 };
 
-module.exports = admin;
+module.exports = adminMiddleware;

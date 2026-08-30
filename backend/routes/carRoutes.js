@@ -13,13 +13,37 @@ const admin = require("../middleware/adminMiddleware");
 
 const router = express.Router();
 
-// Public routes
+// ========================================
+// PUBLIC
+// ========================================
+
 router.get("/", getCars);
+
 router.get("/:id", getCarById);
 
-// Admin routes
-router.post("/", protect, admin, createCar);
-router.put("/:id", protect, admin, updateCar);
-router.delete("/:id", protect, admin, deleteCar);
+// ========================================
+// ADMIN
+// ========================================
+
+router.post(
+  "/",
+  protect,
+  admin,
+  createCar
+);
+
+router.put(
+  "/:id",
+  protect,
+  admin,
+  updateCar
+);
+
+router.delete(
+  "/:id",
+  protect,
+  admin,
+  deleteCar
+);
 
 module.exports = router;

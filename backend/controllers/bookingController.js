@@ -32,6 +32,13 @@ const createBooking = async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid date",
+      });
+    }
+
     if (start >= end) {
       return res.status(400).json({
         success: false,
@@ -39,7 +46,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Check for overlapping booking
     const existingBooking = await Booking.findOne({
       car: carId,
       status: { $ne: "Cancelled" },
@@ -63,8 +69,8 @@ const createBooking = async (req, res) => {
     const booking = await Booking.create({
       user: req.user._id,
       car: carId,
-      startDate,
-      endDate,
+      startDate: start,
+      endDate: end,
       totalPrice,
       status: "Pending",
     });
@@ -75,6 +81,58 @@ const createBooking = async (req, res) => {
       booking,
     });
   } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// CONFIRM PAYMENT
+const confirmPayment = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking ID is required",
+      });
+    }
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      user: req.user._id,
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    if (booking.status === "Cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled booking cannot be confirmed",
+      });
+    }
+
+    booking.status = "Confirmed";
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Payment confirmed successfully",
+      booking,
+    });
+  } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       success: false,
       message: error.message,
@@ -88,7 +146,10 @@ const getMyBookings = async (req, res) => {
     const bookings = await Booking.find({
       user: req.user._id,
     })
-      .populate("car", "brand model image pricePerDay")
+      .populate(
+        "car",
+        "brand model year image pricePerDay seats fuelType"
+      )
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -126,6 +187,13 @@ const cancelBooking = async (req, res) => {
       });
     }
 
+    if (booking.status === "Completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Completed booking cannot be cancelled",
+      });
+    }
+
     booking.status = "Cancelled";
 
     await booking.save();
@@ -148,7 +216,10 @@ const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate("user", "name email")
-      .populate("car", "brand model image pricePerDay")
+      .populate(
+        "car",
+        "brand model year image pricePerDay seats fuelType"
+      )
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -179,8 +250,7 @@ const updateBookingStatus = async (req, res) => {
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid status. Use Pending, Confirmed, Completed or Cancelled",
+        message: "Invalid booking status",
       });
     }
 
@@ -212,6 +282,7 @@ const updateBookingStatus = async (req, res) => {
 
 module.exports = {
   createBooking,
+  confirmPayment,
   getMyBookings,
   cancelBooking,
   getAllBookings,

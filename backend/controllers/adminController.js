@@ -1,70 +1,150 @@
-const Car = require("../models/Car");
-const User = require("../models/User");
 const Booking = require("../models/Booking");
 
-// GET ADMIN DASHBOARD STATISTICS
-const getAdminStats = async (req, res) => {
+// ========================================
+// ADMIN DASHBOARD
+// ========================================
+
+const getAdminDashboard = async (
+  req,
+  res
+) => {
   try {
-    const totalCars = await Car.countDocuments();
 
-    const availableCars = await Car.countDocuments({
-      available: true,
-    });
-
-    const totalUsers = await User.countDocuments();
-
-    const totalBookings = await Booking.countDocuments();
-
-    const pendingBookings = await Booking.countDocuments({
-      status: "Pending",
-    });
-
-    const confirmedBookings = await Booking.countDocuments({
-      status: "Confirmed",
-    });
-
-    const completedBookings = await Booking.countDocuments({
-      status: "Completed",
-    });
-
-    // Revenue from confirmed/completed bookings
-    const revenueResult = await Booking.aggregate([
-      {
-        $match: {
-          status: {
-            $in: ["Confirmed", "Completed"],
-          },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: {
-            $sum: "$totalPrice",
-          },
-        },
-      },
-    ]);
-
-    const totalRevenue =
-      revenueResult.length > 0
-        ? revenueResult[0].totalRevenue
-        : 0;
+    const totalBookings =
+      await Booking.countDocuments();
 
     res.status(200).json({
       success: true,
-      stats: {
-        totalCars,
-        availableCars,
-        totalUsers,
-        totalBookings,
-        pendingBookings,
-        confirmedBookings,
-        completedBookings,
-        totalRevenue,
-      },
+      totalBookings,
     });
+
   } catch (error) {
+
+    console.error(
+      "Dashboard error:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ========================================
+// GET ALL BOOKINGS
+// ========================================
+
+const getAllBookings = async (
+  req,
+  res
+) => {
+  try {
+
+    const bookings =
+      await Booking.find()
+        .populate(
+          "user",
+          "name email"
+        )
+        .populate(
+          "car",
+          "brand model year pricePerDay image"
+        )
+        .sort({
+          createdAt: -1,
+        });
+
+    res.status(200).json({
+      success: true,
+      count: bookings.length,
+      bookings,
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Get admin bookings error:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ========================================
+// UPDATE BOOKING STATUS
+// ========================================
+
+const updateBookingStatus = async (
+  req,
+  res
+) => {
+  try {
+
+    const { status } = req.body;
+
+    const allowedStatuses = [
+      "pending",
+      "confirmed",
+      "cancelled",
+      "completed",
+    ];
+
+    if (
+      !allowedStatuses.includes(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking status",
+      });
+    }
+
+    const booking =
+      await Booking.findByIdAndUpdate(
+        req.params.id,
+        {
+          status,
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      )
+        .populate(
+          "user",
+          "name email"
+        )
+        .populate(
+          "car",
+          "brand model year pricePerDay image"
+        );
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Booking status updated successfully",
+      booking,
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Update booking error:",
+      error
+    );
+
     res.status(500).json({
       success: false,
       message: error.message,
@@ -73,5 +153,7 @@ const getAdminStats = async (req, res) => {
 };
 
 module.exports = {
-  getAdminStats,
+  getAdminDashboard,
+  getAllBookings,
+  updateBookingStatus,
 };

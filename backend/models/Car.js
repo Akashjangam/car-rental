@@ -22,6 +22,7 @@ const carSchema = new mongoose.Schema(
     pricePerDay: {
       type: Number,
       required: true,
+      min: 0,
     },
 
     fuelType: {
@@ -39,6 +40,7 @@ const carSchema = new mongoose.Schema(
     seats: {
       type: Number,
       required: true,
+      min: 1,
     },
 
     image: {

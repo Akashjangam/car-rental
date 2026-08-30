@@ -31,8 +31,13 @@ const bookingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "Confirmed", "Completed", "Cancelled"],
-      default: "Pending",
+      enum: [
+        "pending",
+        "confirmed",
+        "cancelled",
+        "completed",
+      ],
+      default: "pending",
     },
   },
   {
@@ -40,6 +45,9 @@ const bookingSchema = new mongoose.Schema(
   }
 );
 
-const Booking = mongoose.model("Booking", bookingSchema);
+const Booking = mongoose.model(
+  "Booking",
+  bookingSchema
+);
 
 module.exports = Booking;
