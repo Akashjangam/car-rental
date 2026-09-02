@@ -1,38 +1,62 @@
 const express = require("express");
 
+const protect = require("../middleware/authMiddleware");
+
 const {
   createBooking,
   getMyBookings,
-  getAllBookings,
+  getBookingById,
   cancelBooking,
 } = require("../controllers/bookingController");
 
-const protect = require("../middleware/authMiddleware");
-const admin = require("../middleware/adminMiddleware");
-
 const router = express.Router();
 
-// User routes
-router.post("/", protect, createBooking);
+/* ======================================================
+   CREATE BOOKING
+   POST /api/bookings
+====================================================== */
+
+router.post(
+  "/",
+  protect,
+  createBooking,
+);
+
+
+/* ======================================================
+   GET MY BOOKINGS
+   GET /api/bookings/my-bookings
+====================================================== */
 
 router.get(
   "/my-bookings",
   protect,
-  getMyBookings
+  getMyBookings,
 );
+
+
+/* ======================================================
+   GET SINGLE BOOKING
+   GET /api/bookings/:id
+====================================================== */
+
+router.get(
+  "/:id",
+  protect,
+  getBookingById,
+);
+
+
+/* ======================================================
+   CANCEL BOOKING
+   PUT /api/bookings/:id/cancel
+====================================================== */
 
 router.put(
   "/:id/cancel",
   protect,
-  cancelBooking
+  cancelBooking,
 );
 
-// Admin
-router.get(
-  "/",
-  protect,
-  admin,
-  getAllBookings
-);
 
 module.exports = router;

@@ -1,156 +1,250 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-import axios from "axios";
+import { registerUser, loginUser, getProfile } from "../services/authApi";
 
 const AuthContext = createContext(null);
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("token");
+  });
+
   const [loading, setLoading] = useState(true);
 
-  // =========================
-  // LOAD USER
-  // =========================
+  // =========================================================
+  // LOAD USER FROM EXISTING TOKEN
+  // =========================================================
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    let mounted = true;
 
-    if (storedUser) {
+    const loadUser = async () => {
+      const storedToken = localStorage.getItem("token");
+
+      // No token
+      if (!storedToken) {
+        if (mounted) {
+          setToken(null);
+          setUser(null);
+          setLoading(false);
+        }
+
+        return;
+      }
+
       try {
-        setUser(JSON.parse(storedUser));
+        const response = await getProfile(storedToken);
+
+        /*
+          Backend normally returns:
+
+          {
+            success: true,
+            user: {
+              _id,
+              name,
+              email,
+              role
+            }
+          }
+        */
+
+        const userData =
+          response?.user || response?.data?.user || response?.data || null;
+
+        if (!userData || !userData._id) {
+          throw new Error("Invalid user profile received");
+        }
+
+        if (!mounted) return;
+
+        setToken(storedToken);
+        setUser(userData);
       } catch (error) {
-        console.error("Invalid stored user");
-        localStorage.removeItem("user");
+        console.error("Failed to restore authentication:", error);
+
+        /*
+          Only remove the token when the server
+          explicitly says the authentication token
+          is invalid/unauthorized.
+
+          This prevents accidental logout because
+          of temporary server/network errors.
+        */
+
+        const status = error?.response?.status;
+
+        if (status === 401) {
+          localStorage.removeItem("token");
+
+          if (mounted) {
+            setToken(null);
+            setUser(null);
+          }
+        } else {
+          /*
+            Keep the token if the problem is not
+            an authentication error.
+          */
+
+          if (mounted) {
+            setToken(storedToken);
+          }
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // =========================================================
+  // REGISTER
+  // =========================================================
+
+  const register = async (userData) => {
+    const response = await registerUser(userData);
+
+    return response;
+  };
+
+  // =========================================================
+  // LOGIN
+  // =========================================================
+
+  const login = async (loginData) => {
+    const response = await loginUser(loginData);
+
+    /*
+      Support:
+
+      {
+        token: "...",
+        user: {...}
+      }
+
+      or
+
+      {
+        data: {
+          token: "...",
+          user: {...}
+        }
+      }
+    */
+
+    const newToken = response?.token || response?.data?.token;
+
+    const userData = response?.user || response?.data?.user || null;
+
+    if (!newToken) {
+      throw new Error("Login failed: token not received.");
+    }
+
+    // Save token permanently
+    localStorage.setItem("token", newToken);
+
+    // Update state
+    setToken(newToken);
+
+    // If login already returned user
+    if (userData?._id) {
+      setUser(userData);
+    } else {
+      /*
+        Otherwise fetch profile
+      */
+
+      try {
+        const profileResponse = await getProfile(newToken);
+
+        const profileUser =
+          profileResponse?.user ||
+          profileResponse?.data?.user ||
+          profileResponse?.data ||
+          null;
+
+        if (!profileUser?._id) {
+          throw new Error("Invalid profile received after login.");
+        }
+
+        setUser(profileUser);
+      } catch (error) {
+        console.error("Failed to load profile after login:", error);
+
+        /*
+          Login itself succeeded and token exists.
+          Do not immediately delete the token here.
+        */
+
+        setUser(null);
       }
     }
 
-    setLoading(false);
-  }, []);
-
-  // =========================
-  // LOGIN
-  // =========================
-
-  const login = async (email, password) => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/auth/login`,
-        {
-          email,
-          password,
-        }
-      );
-
-      const token = response.data.token;
-      const loggedInUser = response.data.user;
-
-      localStorage.setItem("token", token);
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(loggedInUser)
-      );
-
-      setUser(loggedInUser);
-
-      return {
-        success: true,
-        user: loggedInUser,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          error.response?.data?.message ||
-          "Login failed",
-      };
-    }
+    return response;
   };
 
-  // =========================
-  // REGISTER
-  // =========================
-
-  const register = async (
-    name,
-    email,
-    password
-  ) => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/auth/register`,
-        {
-          name,
-          email,
-          password,
-        }
-      );
-
-      const token = response.data.token;
-      const registeredUser = response.data.user;
-
-      localStorage.setItem("token", token);
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(registeredUser)
-      );
-
-      setUser(registeredUser);
-
-      return {
-        success: true,
-        user: registeredUser,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          error.response?.data?.message ||
-          "Registration failed",
-      };
-    }
-  };
-
-  // =========================
+  // =========================================================
   // LOGOUT
-  // =========================
+  // =========================================================
 
   const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
 
+    setToken(null);
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        register,
-        logout,
-        isAdmin: user?.role === "admin",
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  // =========================================================
+  // AUTH VALUE
+  // =========================================================
+
+  const value = {
+    user,
+    setUser,
+
+    token,
+    setToken,
+
+    loading,
+
+    register,
+    login,
+    logout,
+
+    isAuthenticated: Boolean(user && token),
+
+    isAdmin: user?.role === "admin",
+
+    isDealer: user?.role === "dealer",
+
+    isUser: user?.role === "user",
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// =========================
+// =========================================================
 // USE AUTH
-// =========================
+// =========================================================
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used inside an AuthProvider");
+  }
+
+  return context;
 };
+
+export default AuthContext;

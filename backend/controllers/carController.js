@@ -1,171 +1,110 @@
 const Car = require("../models/Car");
+const mongoose = require("mongoose");
 
-const getCars = async (req, res) => {
-  try {
-    const {
-      brand,
-      transmission,
-      seats,
-      available,
-      minPrice,
-      maxPrice,
-      sort,
-    } = req.query;
-
-    const page =
-      Number(req.query.page) || 1;
-
-    const limit =
-      Number(req.query.limit) || 6;
-
-    const skip =
-      (page - 1) * limit;
-
-    const filter = {};
-
-    if (brand) {
-      filter.brand = {
-        $regex: brand,
-        $options: "i",
-      };
-    }
-
-    if (transmission) {
-      filter.transmission =
-        transmission;
-    }
-
-    if (seats) {
-      filter.seats = Number(seats);
-    }
-
-    if (available !== undefined) {
-      filter.available =
-        available === "true";
-    }
-
-    if (minPrice || maxPrice) {
-      filter.pricePerDay = {};
-
-      if (minPrice) {
-        filter.pricePerDay.$gte =
-          Number(minPrice);
-      }
-
-      if (maxPrice) {
-        filter.pricePerDay.$lte =
-          Number(maxPrice);
-      }
-    }
-
-    let sortOption = {
-      createdAt: -1,
-    };
-
-    if (sort === "priceAsc") {
-      sortOption = {
-        pricePerDay: 1,
-      };
-    }
-
-    if (sort === "priceDesc") {
-      sortOption = {
-        pricePerDay: -1,
-      };
-    }
-
-    if (sort === "newest") {
-      sortOption = {
-        createdAt: -1,
-      };
-    }
-
-    if (sort === "oldest") {
-      sortOption = {
-        createdAt: 1,
-      };
-    }
-
-    const totalCars =
-      await Car.countDocuments(filter);
-
-    const cars = await Car.find(filter)
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit);
-
-    res.status(200).json({
-      success: true,
-
-      count: cars.length,
-
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(
-          totalCars / limit
-        ),
-        totalCars,
-        limit,
-      },
-
-      cars,
-    });
-
-  } catch (error) {
-
-    console.error(
-      "Get cars error:",
-      error
-    );
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// ========================================
-// CREATE CAR
-// ========================================
+// CREATE CAR - ADMIN
 
 const createCar = async (req, res) => {
   try {
+    const {
+      brand,
+      model,
+      year,
+      pricePerDay,
+      fuelType,
+      transmission,
+      seats,
+      available,
+    } = req.body;
 
-    const car = await Car.create(
-      req.body
-    );
+    // Validate required fields
+    if (
+      !brand ||
+      !model ||
+      !year ||
+      pricePerDay === undefined ||
+      pricePerDay === "" ||
+      !fuelType ||
+      !transmission ||
+      !seats
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "All car details are required",
+      });
+    }
 
-    res.status(201).json({
-      success: true,
-      message:
-        "Car created successfully",
-      car,
+    const car = await Car.create({
+      brand: brand.trim(),
+      model: model.trim(),
+      year: Number(year),
+      pricePerDay: Number(pricePerDay),
+      fuelType,
+      transmission,
+      seats: Number(seats),
+
+      available: available === "false" ? false : true,
+
+      image: req.file ? `/uploads/${req.file.filename}` : "",
+
+      // IMPORTANT:
+      // Admin-added cars do not have a dealer.
+      dealer: null,
     });
 
+    return res.status(201).json({
+      success: true,
+      message: "Car created successfully",
+      car,
+    });
   } catch (error) {
+    console.error("Create car error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to create car",
+      error: error.message,
     });
   }
 };
 
-// ========================================
+// GET ALL CARS
+
+const getCars = async (req, res) => {
+  try {
+    const cars = await Car.find().populate("dealer", "name email").sort({
+      createdAt: -1,
+    });
+
+    return res.status(200).json({
+      success: true,
+      cars,
+    });
+  } catch (error) {
+    console.error("Get cars error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get cars",
+      error: error.message,
+    });
+  }
+};
+
 // GET SINGLE CAR
-// ========================================
 
-const getCarById = async (
-  req,
-  res
-) => {
+const getCarById = async (req, res) => {
   try {
+    const { id } = req.params;
 
-    const car =
-      await Car.findById(
-        req.params.id
-      );
+    // Validate ID
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid car identifier",
+      });
+    }
+
+    const car = await Car.findById(id).populate("dealer", "name email");
 
     if (!car) {
       return res.status(404).json({
@@ -174,39 +113,36 @@ const getCarById = async (
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       car,
     });
-
   } catch (error) {
+    console.error("Get car error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to get car",
+      error: error.message,
     });
   }
 };
 
-// ========================================
-// UPDATE CAR
-// ========================================
+// UPDATE CAR - ADMIN
 
-const updateCar = async (
-  req,
-  res
-) => {
+const updateCar = async (req, res) => {
   try {
+    const { id } = req.params;
 
-    const car =
-      await Car.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        {
-          returnDocument: "after",
-          runValidators: true,
-        }
-      );
+    // Validate ID
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid car identifier",
+      });
+    }
+
+    const car = await Car.findById(id);
 
     if (!car) {
       return res.status(404).json({
@@ -215,36 +151,110 @@ const updateCar = async (
       });
     }
 
-    res.status(200).json({
+    const {
+      brand,
+      model,
+      year,
+      pricePerDay,
+      fuelType,
+      transmission,
+      seats,
+      available,
+    } = req.body;
+
+    // UPDATE CAR DETAILS
+
+    if (brand !== undefined && brand.trim() !== "") {
+      car.brand = brand.trim();
+    }
+
+    if (model !== undefined && model.trim() !== "") {
+      car.model = model.trim();
+    }
+
+    if (year !== undefined && year !== "") {
+      car.year = Number(year);
+    }
+
+    if (pricePerDay !== undefined && pricePerDay !== "") {
+      car.pricePerDay = Number(pricePerDay);
+    }
+
+    if (fuelType !== undefined) {
+      car.fuelType = fuelType;
+    }
+
+    if (transmission !== undefined) {
+      car.transmission = transmission;
+    }
+
+    if (seats !== undefined && seats !== "") {
+      car.seats = Number(seats);
+    }
+
+    // UPDATE AVAILABILITY
+
+    if (available !== undefined) {
+      if (available === "false") {
+        car.available = false;
+      } else if (available === "true") {
+        car.available = true;
+      } else {
+        car.available = Boolean(available);
+      }
+    }
+
+    // UPDATE IMAGE
+
+    if (req.file) {
+      car.image = `/uploads/${req.file.filename}`;
+    }
+
+    // IMPORTANT
+
+    //
+    // Admin does NOT assign a dealer.
+    //
+    // If this car already belongs to a dealer,
+    // leave that dealer unchanged.
+    //
+    // If it is an admin-created car, dealer
+    // remains null.
+    //
+
+    await car.save();
+
+    return res.status(200).json({
       success: true,
-      message:
-        "Car updated successfully",
+      message: "Car updated successfully",
       car,
     });
-
   } catch (error) {
+    console.error("Update car error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to update car",
+      error: error.message,
     });
   }
 };
 
-// ========================================
-// DELETE CAR
-// ========================================
+// DELETE CAR - ADMIN
 
-const deleteCar = async (
-  req,
-  res
-) => {
+const deleteCar = async (req, res) => {
   try {
+    const { id } = req.params;
 
-    const car =
-      await Car.findByIdAndDelete(
-        req.params.id
-      );
+    // Validate ID
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid car identifier",
+      });
+    }
+
+    const car = await Car.findById(id);
 
     if (!car) {
       return res.status(404).json({
@@ -253,25 +263,30 @@ const deleteCar = async (
       });
     }
 
-    res.status(200).json({
+    await Car.findByIdAndDelete(id);
+
+    return res.status(200).json({
       success: true,
-      message:
-        "Car deleted successfully",
+      message: "Car deleted successfully",
     });
-
   } catch (error) {
+    console.error("Delete car error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to delete car",
+      error: error.message,
     });
   }
 };
+
+// EXPORTS
+//
 
 module.exports = {
+  createCar,
   getCars,
   getCarById,
-  createCar,
   updateCar,
   deleteCar,
 };

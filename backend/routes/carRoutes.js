@@ -10,40 +10,36 @@ const {
 
 const protect = require("../middleware/authMiddleware");
 const admin = require("../middleware/adminMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
 // ========================================
-// PUBLIC
+// PUBLIC ROUTES
 // ========================================
 
+// Get all cars
+// GET /api/cars
 router.get("/", getCars);
 
+// Get single car
+// GET /api/cars/:id
 router.get("/:id", getCarById);
 
 // ========================================
-// ADMIN
+// ADMIN ROUTES
 // ========================================
 
-router.post(
-  "/",
-  protect,
-  admin,
-  createCar
-);
+// Create car
+// POST /api/cars
+router.post("/", protect, admin, upload.single("image"), createCar);
 
-router.put(
-  "/:id",
-  protect,
-  admin,
-  updateCar
-);
+// Update car
+// PUT /api/cars/:id
+router.put("/:id", protect, admin, upload.single("image"), updateCar);
 
-router.delete(
-  "/:id",
-  protect,
-  admin,
-  deleteCar
-);
+// Delete car
+// DELETE /api/cars/:id
+router.delete("/:id", protect, admin, deleteCar);
 
 module.exports = router;

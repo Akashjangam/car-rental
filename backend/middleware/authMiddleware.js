@@ -3,53 +3,76 @@ const User = require("../models/User");
 
 const protect = async (req, res, next) => {
   try {
-    let token;
+    // GET AUTHORIZATION HEADER
 
-    // Check Authorization header
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer ")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
+    const authHeader = req.headers.authorization;
 
-    // Token missing
-    if (!token) {
+    if (!authHeader) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized. Token not found",
+        message: "Authorization token required",
       });
     }
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    // Expected:
+    // Authorization: Bearer TOKEN
 
-    // Get current user from database
-    const user = await User.findById(decoded.id).select(
-      "-password"
-    );
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authorization format",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token missing",
+      });
+    }
+
+    // VERIFY TOKEN
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // FIND USER
+
+    const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "User not found",
+        message: "User no longer exists",
       });
     }
 
-    // IMPORTANT
-    // This contains role: admin
+    // ATTACH USER TO REQUEST
+
     req.user = user;
 
     next();
   } catch (error) {
-    console.error("Auth error:", error.message);
+    console.error("Auth middleware error:", error);
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token expired",
+      });
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token",
+      });
+    }
 
     return res.status(401).json({
       success: false,
-      message: "Not authorized. Invalid token",
+      message: "Authentication failed",
     });
   }
 };

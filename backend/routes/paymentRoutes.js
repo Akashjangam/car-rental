@@ -2,22 +2,24 @@ const express = require("express");
 
 const {
   createPayment,
-  getMyPayments,
-  getAllPayments,
+  paymentCallback,
+  getPaymentStatus,
 } = require("../controllers/paymentController");
 
 const protect = require("../middleware/authMiddleware");
-const admin = require("../middleware/adminMiddleware");
 
 const router = express.Router();
 
-// GET ALL PAYMENTS - ADMIN
-router.get("/admin/all", protect, admin, getAllPayments);
-
-// GET MY PAYMENTS
-router.get("/my-payments", protect, getMyPayments);
-
-// CREATE PAYMENT
+// Create payment
+// POST /api/payments
 router.post("/", protect, createPayment);
+
+// Paytm callback
+// POST /api/payments/callback
+router.post("/callback", paymentCallback);
+
+// Payment status
+// GET /api/payments/status/:orderId
+router.get("/status/:orderId", protect, getPaymentStatus);
 
 module.exports = router;

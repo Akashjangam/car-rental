@@ -14,30 +14,52 @@ const paymentSchema = new mongoose.Schema(
       required: true,
     },
 
+    orderId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
     amount: {
       type: Number,
       required: true,
-    },
-
-    paymentMethod: {
-      type: String,
-      enum: ["Card", "UPI", "Cash"],
-      default: "Card",
-    },
-
-    transactionId: {
-      type: String,
+      min: 0,
     },
 
     status: {
       type: String,
-      enum: ["Pending", "Success", "Failed"],
-      default: "Pending",
+      enum: ["pending", "success", "failed"],
+      default: "pending",
+    },
+
+    paymentMethod: {
+      type: String,
+      default: "Paytm",
+    },
+
+    transactionId: {
+      type: String,
+      default: null,
+    },
+
+    bankTransactionId: {
+      type: String,
+      default: null,
+    },
+
+    responseCode: {
+      type: String,
+      default: null,
+    },
+
+    responseMessage: {
+      type: String,
+      default: null,
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Payment", paymentSchema);

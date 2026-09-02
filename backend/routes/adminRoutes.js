@@ -1,35 +1,44 @@
 const express = require("express");
 
-const {
-  getAdminDashboard,
-  getAllBookings,
-  updateBookingStatus,
-} = require("../controllers/adminController");
-
 const protect = require("../middleware/authMiddleware");
 const admin = require("../middleware/adminMiddleware");
 
+const {
+  getAdminDashboard,
+  getAllUsers,
+  updateUserRole,
+  createAdminMember,
+  deleteAdminMember,
+  getAdminBookings,
+  updateAdminBookingStatus,
+} = require("../controllers/adminController");
+
 const router = express.Router();
 
-// Protect all admin routes
-router.use(protect, admin);
+// ==========================================
+// ADMIN DASHBOARD
+// ==========================================
 
-// Dashboard
-router.get(
-  "/dashboard",
-  getAdminDashboard
-);
+router.get("/dashboard", protect, admin, getAdminDashboard);
 
-// Get all bookings
-router.get(
-  "/bookings",
-  getAllBookings
-);
+// ==========================================
+// ADMIN MEMBERS / USERS
+// ==========================================
 
-// Update booking status
-router.put(
-  "/bookings/:id",
-  updateBookingStatus
-);
+router.get("/users", protect, admin, getAllUsers);
+
+router.put("/users/:id/role", protect, admin, updateUserRole);
+
+router.post("/members", protect, admin, createAdminMember);
+
+router.delete("/members/:id", protect, admin, deleteAdminMember);
+
+// ==========================================
+// ADMIN BOOKINGS
+// ==========================================
+
+router.get("/bookings", protect, admin, getAdminBookings);
+
+router.put("/bookings/:id/status", protect, admin, updateAdminBookingStatus);
 
 module.exports = router;

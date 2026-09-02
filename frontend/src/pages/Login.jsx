@@ -1,192 +1,180 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CarFront, Mail, Lock } from "lucide-react";
-
-import { useAuth } from "../context/AuthContext";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { ArrowLeft, Car } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
-
-  const { login, loading } = useAuth();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setError("");
+    setLoading(true);
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter email and password.");
-      return;
+    try {
+      const data = await login({
+        email,
+        password,
+      });
+
+      if (!data?.success) {
+        setError(data?.message || "Login failed.");
+        return;
+      }
+
+      if (data.user?.role === "admin") {
+        navigate("/admin");
+      } else if (data.user?.role === "dealer") {
+        navigate("/dealer/cars");
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+
+      setError(
+        err.response?.data?.message ||
+          "Login failed. Please check your credentials.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    const result = await login(
-      email.trim(),
-      password
-    );
-
-    if (!result.success) {
-      setError(result.message);
-      return;
-    }
-
-    navigate("/");
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+    <main className="min-h-[calc(100vh-76px)] bg-background px-5 py-12 sm:px-8 lg:px-10">
+      <div className="mx-auto flex min-h-[calc(100vh-160px)] max-w-[1400px] items-center justify-center">
+        <div className="w-full max-w-lg">
+          {/* Back */}
+          <Link
+            to="/"
+            className="mb-8 inline-flex items-center gap-2 font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to home
+          </Link>
 
-      <Card className="w-full max-w-md">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card text-primary">
+              <Car className="h-5 w-5" strokeWidth={1.7} aria-hidden="true" />
+            </div>
 
-        {/* HEADER */}
+            <p className="mb-3 font-garamond text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+              DriveNow
+            </p>
 
-        <CardHeader className="text-center">
+            <h1 className="font-metal text-4xl leading-none tracking-tight text-foreground sm:text-5xl">
+              Welcome back
+            </h1>
 
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#30AFFF]/10">
-            <CarFront
-              size={30}
-              className="text-[#30AFFF]"
-            />
+            <p className="mt-4 max-w-md font-garamond text-lg leading-7 text-muted-foreground">
+              Sign in to continue your journey with DriveNow.
+            </p>
           </div>
 
-          <CardTitle className="mt-4 text-2xl">
-            Welcome Back
-          </CardTitle>
-
-          <p className="text-sm text-slate-500">
-            Login to continue renting cars
-          </p>
-
-        </CardHeader>
-
-        <CardContent>
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
-          >
-
-            {/* EMAIL */}
-
-            <div>
-
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Email
-              </label>
-
-              <div className="relative">
-
-                <Mail
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
+          {/* Form */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+              {/* Email */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-2 block font-garamond text-base font-semibold text-foreground"
+                >
+                  Email address
+                </label>
 
                 <Input
                   id="email"
+                  name="email"
                   type="email"
-                  placeholder="you@example.com"
                   value={email}
-                  onChange={(e) =>
-                    setEmail(e.target.value)
-                  }
-                  className="pl-10"
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                  disabled={loading}
+                  className="h-12 rounded-xl border-border bg-background font-garamond text-base"
+                  aria-invalid={Boolean(error)}
                 />
-
               </div>
 
-            </div>
-
-            {/* PASSWORD */}
-
-            <div>
-
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Password
-              </label>
-
-              <div className="relative">
-
-                <Lock
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
+              {/* Password */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-2 block font-garamond text-base font-semibold text-foreground"
+                >
+                  Password
+                </label>
 
                 <Input
                   id="password"
+                  name="password"
                   type="password"
-                  placeholder="Enter your password"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
-                  className="pl-10"
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  autoComplete="current-password"
+                  disabled={loading}
+                  className="h-12 rounded-xl border-border bg-background font-garamond text-base"
                 />
-
               </div>
 
+              {/* Error */}
+              {error && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 font-garamond text-base text-destructive"
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="h-12 w-full rounded-xl font-garamond text-base font-semibold"
+              >
+                {loading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+
+            {/* Register */}
+            <div className="mt-7 border-t border-border pt-6 text-center">
+              <p className="font-garamond text-base text-muted-foreground">
+                Don't have an account?{" "}
+                <Link
+                  to="/register"
+                  className="font-semibold text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  Create an account
+                </Link>
+              </p>
             </div>
+          </div>
 
-            {/* ERROR */}
-
-            {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                {error}
-              </div>
-            )}
-
-            {/* LOGIN */}
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#30AFFF] text-white hover:bg-[#239fe5]"
-            >
-              {loading
-                ? "Logging in..."
-                : "Login"}
-            </Button>
-
-          </form>
-
-          {/* REGISTER */}
-
-          <p className="mt-6 text-center text-sm text-slate-500">
-
-            Don't have an account?{" "}
-
-            <Link
-              to="/register"
-              className="font-semibold text-[#30AFFF] hover:underline"
-            >
-              Register
-            </Link>
-
+          {/* Bottom Note */}
+          <p className="mt-6 text-center font-garamond text-sm text-muted-foreground">
+            Secure access to your DriveNow account.
           </p>
-
-        </CardContent>
-
-      </Card>
-
+        </div>
+      </div>
     </main>
   );
 }

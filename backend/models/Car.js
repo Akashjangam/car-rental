@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 
 const carSchema = new mongoose.Schema(
   {
+    // CAR DETAILS
+
     brand: {
       type: String,
       required: true,
@@ -43,21 +45,45 @@ const carSchema = new mongoose.Schema(
       min: 1,
     },
 
-    image: {
-      type: String,
-      default: "",
-    },
+
+    // AVAILABILITY
+  
 
     available: {
       type: Boolean,
       default: true,
     },
+
+   
+    // CAR IMAGE
+ 
+
+    image: {
+      type: String,
+      default: "",
+    },
+
+    // DEALER
+
+
+    // Admin-added cars:
+    // dealer can be empty.
+
+    // Dealer-added cars:
+    // backend automatically stores the
+    // logged-in dealer's user ID.
+
+
+    dealer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+      default: null,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-const Car = mongoose.model("Car", carSchema);
-
-module.exports = Car;
+module.exports = mongoose.model("Car", carSchema);

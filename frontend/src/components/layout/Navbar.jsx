@@ -1,267 +1,341 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Car, Menu, X, LogOut } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  CarFront,
+  UserRound,
+  LogOut,
+  Menu,
+  X,
+  LayoutDashboard,
+  Plus,
+  Heart,
+} from "lucide-react";
 import { useState } from "react";
 
-function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+import { useAuth } from "../../context/AuthContext";
 
+const Navbar = () => {
+  const { user, logout, loading } = useAuth();
+
+  const location = useLocation();
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("token");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const user = JSON.parse(
-    localStorage.getItem("user") || "null"
-  );
-
-  const isLoggedIn = !!token;
+  const isDealer = user?.role === "dealer";
   const isAdmin = user?.role === "admin";
 
-  const closeMenu = () => {
-    setMobileOpen(false);
-  };
-
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    closeMenu();
-
+    logout();
+    setMobileOpen(false);
     navigate("/login");
   };
 
+  const closeMobile = () => {
+    setMobileOpen(false);
+  };
+
+  const isActive = (path) => location.pathname === path;
+
+  const navLinkClass = (path) =>
+    `relative flex items-center py-2 font-garamond text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+      isActive(path)
+        ? "text-primary"
+        : "text-foreground/75 hover:text-foreground"
+    }`;
+
   return (
-    <header className="sticky top-0 z-50 border-b bg-white">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/95 backdrop-blur-md">
+      <div className="mx-auto flex h-[76px] max-w-[1400px] items-center justify-between px-5 sm:px-8 lg:px-10">
         {/* Logo */}
-
         <Link
           to="/"
-          onClick={closeMenu}
-          className="flex items-center gap-2"
+          onClick={closeMobile}
+          className="group flex shrink-0 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="DriveNow home"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#30AFFF] text-white">
-            <Car className="h-5 w-5" />
-          </span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-primary transition group-hover:border-primary">
+            <CarFront
+              className="h-[19px] w-[19px]"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          </div>
 
-          <span className="text-xl font-bold tracking-tight text-slate-900">
-            Drive
-            <span className="text-[#30AFFF]">
-              Now
-            </span>
+          <span className="font-metal text-[23px] leading-none tracking-tight text-foreground">
+            Drive<span className="text-primary">Now</span>
           </span>
         </Link>
 
         {/* Desktop Navigation */}
-
-        <nav className="hidden items-center gap-7 md:flex">
-
-          <Link
-            to="/"
-            className="text-sm font-medium text-slate-700 hover:text-[#30AFFF]"
-          >
+        <nav
+          className="hidden items-center gap-8 md:flex lg:gap-10"
+          aria-label="Main navigation"
+        >
+          <Link to="/" className={navLinkClass("/")}>
             Home
+            {isActive("/") && (
+              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+            )}
           </Link>
 
-          <Link
-            to="/cars"
-            className="text-sm font-medium text-slate-700 hover:text-[#30AFFF]"
-          >
+          <Link to="/cars" className={navLinkClass("/cars")}>
             Cars
+            {isActive("/cars") && (
+              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+            )}
           </Link>
 
-          <Link
-            to="/how-it-works"
-            className="text-sm font-medium text-slate-700 hover:text-[#30AFFF]"
-          >
-            How It Works
-          </Link>
-
-          <Link
-            to="/about"
-            className="text-sm font-medium text-slate-700 hover:text-[#30AFFF]"
-          >
+          <Link to="/about" className={navLinkClass("/about")}>
             About
+            {isActive("/about") && (
+              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+            )}
           </Link>
 
-          {isLoggedIn && (
+          <Link to="/how-it-works" className={navLinkClass("/how-it-works")}>
+            How It Works
+            {isActive("/how-it-works") && (
+              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+            )}
+          </Link>
+
+          {isDealer && (
             <Link
-              to="/my-bookings"
-              className="text-sm font-medium text-slate-700 hover:text-[#30AFFF]"
+              to="/dealer/cars"
+              className={`flex items-center gap-1.5 font-garamond text-base transition-colors ${
+                location.pathname.startsWith("/dealer")
+                  ? "text-primary"
+                  : "text-foreground/75 hover:text-foreground"
+              }`}
             >
-              My Bookings
+              <CarFront className="h-4 w-4" aria-hidden="true" />
+              My Cars
             </Link>
           )}
 
           {isAdmin && (
             <Link
               to="/admin"
-              className="text-sm font-semibold text-[#30AFFF]"
+              className={`flex items-center gap-1.5 font-garamond text-base transition-colors ${
+                location.pathname.startsWith("/admin")
+                  ? "text-primary"
+                  : "text-foreground/75 hover:text-foreground"
+              }`}
             >
+              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
               Admin
             </Link>
           )}
-
         </nav>
 
-        {/* Desktop Actions */}
-
+        {/* Desktop Right */}
         <div className="hidden items-center gap-3 md:flex">
-
-          {!isLoggedIn ? (
+          {!loading && user ? (
             <>
-              <Link to="/login">
-                <button className="rounded-md px-4 py-2 text-sm font-medium hover:bg-slate-100">
-                  Login
-                </button>
-              </Link>
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground/70 transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Favorites"
+              >
+                <Heart
+                  className="h-[17px] w-[17px]"
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
+              </button>
 
-              <Link to="/register">
-                <button className="rounded-md bg-[#30AFFF] px-4 py-2 text-sm font-medium text-white hover:bg-[#2499df]">
-                  Get Started
-                </button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <span className="text-sm font-medium text-slate-700">
-                Hi, {user?.name}
-              </span>
+              <div className="flex items-center gap-3 border-l border-border pl-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <UserRound
+                    className="h-[17px] w-[17px]"
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+                </div>
+
+                <div className="hidden leading-tight lg:block">
+                  <p className="max-w-[120px] truncate font-garamond text-base font-semibold text-foreground">
+                    {user.name || "User"}
+                  </p>
+
+                  <p className="font-garamond text-xs capitalize text-muted-foreground">
+                    {user.role === "user" ? "Customer" : user.role}
+                  </p>
+                </div>
+              </div>
 
               <button
+                type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium hover:bg-slate-50"
+                className="ml-1 flex h-10 items-center gap-2 rounded-full border border-border px-4 font-garamond text-sm font-semibold text-foreground/70 transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <LogOut size={16} />
+                <LogOut
+                  className="h-3.5 w-3.5"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
                 Logout
               </button>
             </>
-          )}
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="rounded-full px-5 py-2.5 font-garamond text-base text-foreground/80 transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Login
+              </Link>
 
+              <Link
+                to="/register"
+                className="rounded-full bg-primary px-6 py-2.5 font-garamond text-base font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Register
+              </Link>
+            </>
+          )}
         </div>
 
-        {/* Mobile Menu Button */}
-
+        {/* Mobile Button */}
         <button
           type="button"
-          onClick={() =>
-            setMobileOpen((open) => !open)
-          }
-          className="rounded-md p-2 text-slate-700 hover:bg-slate-100 md:hidden"
+          onClick={() => setMobileOpen((prev) => !prev)}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary md:hidden"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation"
         >
           {mobileOpen ? (
-            <X size={24} />
+            <X className="h-5 w-5" aria-hidden="true" />
           ) : (
-            <Menu size={24} />
+            <Menu className="h-5 w-5" aria-hidden="true" />
           )}
         </button>
-
       </div>
 
       {/* Mobile Navigation */}
-
       {mobileOpen && (
-        <div className="border-t bg-white md:hidden">
+        <div
+          id="mobile-navigation"
+          className="border-t border-border bg-background md:hidden"
+        >
+          <div className="mx-auto max-w-[1400px] px-5 py-5 sm:px-8">
+            <nav className="space-y-1" aria-label="Mobile navigation">
+              {[
+                ["/", "Home"],
+                ["/cars", "Cars"],
+                ["/about", "About"],
+                ["/how-it-works", "How It Works"],
+              ].map(([path, label]) => (
+                <Link
+                  key={path}
+                  to={path}
+                  onClick={closeMobile}
+                  className={`block rounded-xl px-4 py-3 font-garamond text-lg transition ${
+                    isActive(path)
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
 
-          <nav className="flex flex-col p-4">
-
-            <Link
-              to="/"
-              onClick={closeMenu}
-              className="rounded-md px-3 py-3 hover:bg-slate-50"
-            >
-              Home
-            </Link>
-
-            <Link
-              to="/cars"
-              onClick={closeMenu}
-              className="rounded-md px-3 py-3 hover:bg-slate-50"
-            >
-              Cars
-            </Link>
-
-            <Link
-              to="/how-it-works"
-              onClick={closeMenu}
-              className="rounded-md px-3 py-3 hover:bg-slate-50"
-            >
-              How It Works
-            </Link>
-
-            <Link
-              to="/about"
-              onClick={closeMenu}
-              className="rounded-md px-3 py-3 hover:bg-slate-50"
-            >
-              About
-            </Link>
-
-            {isLoggedIn && (
-              <Link
-                to="/my-bookings"
-                onClick={closeMenu}
-                className="rounded-md px-3 py-3 hover:bg-slate-50"
-              >
-                My Bookings
-              </Link>
-            )}
-
-            {isAdmin && (
-              <Link
-                to="/admin"
-                onClick={closeMenu}
-                className="rounded-md px-3 py-3 font-semibold text-[#30AFFF]"
-              >
-                Admin Dashboard
-              </Link>
-            )}
-
-            <div className="mt-3 border-t pt-4">
-
-              {!isLoggedIn ? (
-                <div className="flex gap-3">
+              {isDealer && (
+                <>
+                  <Link
+                    to="/dealer/cars"
+                    onClick={closeMobile}
+                    className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition ${
+                      location.pathname.startsWith("/dealer")
+                        ? "bg-primary/10 text-primary"
+                        : "text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <CarFront className="h-4 w-4" aria-hidden="true" />
+                    My Cars
+                  </Link>
 
                   <Link
-                    to="/login"
-                    onClick={closeMenu}
-                    className="flex-1"
+                    to="/dealer/cars/add"
+                    onClick={closeMobile}
+                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 font-garamond text-lg font-semibold text-primary-foreground"
                   >
-                    <button className="w-full rounded-md border px-4 py-2">
-                      Login
-                    </button>
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Add New Car
+                  </Link>
+                </>
+              )}
+
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={closeMobile}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition ${
+                    location.pathname.startsWith("/admin")
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                  Admin Dashboard
+                </Link>
+              )}
+            </nav>
+
+            <div className="mt-5 border-t border-border pt-5">
+              {!loading && user ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-2xl bg-muted/60 p-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <UserRound className="h-5 w-5" aria-hidden="true" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate font-garamond text-lg font-semibold text-foreground">
+                        {user.name || "User"}
+                      </p>
+
+                      <p className="font-garamond text-sm capitalize text-muted-foreground">
+                        {user.role === "user" ? "Customer" : user.role}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg font-semibold text-destructive transition hover:bg-destructive/5"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <Link
+                    to="/login"
+                    onClick={closeMobile}
+                    className="rounded-full border border-border px-4 py-3 text-center font-garamond text-lg text-foreground transition hover:border-primary hover:text-primary"
+                  >
+                    Login
                   </Link>
 
                   <Link
                     to="/register"
-                    onClick={closeMenu}
-                    className="flex-1"
+                    onClick={closeMobile}
+                    className="rounded-full bg-primary px-4 py-3 text-center font-garamond text-lg font-semibold text-primary-foreground transition hover:opacity-90"
                   >
-                    <button className="w-full rounded-md bg-[#30AFFF] px-4 py-2 text-white">
-                      Register
-                    </button>
+                    Register
                   </Link>
-
                 </div>
-              ) : (
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
               )}
-
             </div>
-
-          </nav>
-
+          </div>
         </div>
       )}
-
     </header>
   );
-}
+};
 
 export default Navbar;

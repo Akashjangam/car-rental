@@ -1,12 +1,20 @@
-const Payment = require("../models/payment");
+const Payment = require("../models/Payment");
 const Booking = require("../models/Booking");
 
-
-// CREATE MOCK PAYMENT
+// ==========================================
+// CREATE DEMO PAYMENT
+// ==========================================
 
 const createPayment = async (req, res) => {
   try {
-    const { bookingId, paymentMethod } = req.body;
+    const { bookingId } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking ID is required",
+      });
+    }
 
     // Find booking
     const booking = await Booking.findById(bookingId);
@@ -18,116 +26,170 @@ const createPayment = async (req, res) => {
       });
     }
 
-    // Check booking belongs to logged-in user
-    if (booking.user.toString() !== req.user._id.toString()) {
+    // Check ownership
+    if (booking.user && booking.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "You are not authorized to pay for this booking",
+        message: "You are not allowed to pay for this booking",
       });
     }
 
-    // Check if successful payment already exists
-    const existingPayment = await Payment.findOne({
-      booking: bookingId,
-      status: "Success",
-    });
-
-    if (existingPayment) {
+    // Cancelled booking
+    if (booking.status === "cancelled") {
       return res.status(400).json({
         success: false,
-        message: "Payment already completed for this booking",
-      }); 
+        message: "Cancelled booking cannot be paid",
+      });
     }
 
-    // Create successful mock payment
+    // Already paid
+    if (booking.paymentStatus === "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Booking is already paid",
+      });
+    }
+
+    // Get booking amount
+    const amount =
+      booking.totalAmount || booking.totalPrice || booking.amount || 0;
+
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking amount",
+      });
+    }
+
+    // Generate unique IDs
+    const orderId = `DN_ORDER_${Date.now()}`;
+
+    const transactionId = `DN_TXN_${Date.now()}_${Math.floor(
+      Math.random() * 100000,
+    )}`;
+
+    // Create payment
     const payment = await Payment.create({
-      booking: bookingId,
+      booking: booking._id,
       user: req.user._id,
-      amount: booking.totalPrice,
-      paymentMethod: paymentMethod || "Card",
-      transactionId: `TXN-${Date.now()}`,
-      status: "Success",
+      orderId,
+      transactionId,
+      amount,
+      status: "success",
+      paymentMethod: "Demo",
     });
 
-    // Confirm booking after successful payment
-    booking.status = "Confirmed";
+    // Update booking
+    booking.paymentStatus = "paid";
+    booking.status = "confirmed";
+    booking.paymentId = payment._id.toString();
+
     await booking.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: "Payment successful",
+      message: "Demo payment successful",
+
+      payment: {
+        id: payment._id,
+        orderId: payment.orderId,
+        transactionId: payment.transactionId,
+        amount: payment.amount,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod,
+      },
+
+      booking: {
+        id: booking._id,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Create payment error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Payment failed",
+      error: error.message,
+    });
+  }
+};
+
+// ==========================================
+// PAYMENT CALLBACK
+// ==========================================
+
+const paymentCallback = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: "Payment callback received",
+    });
+  } catch (error) {
+    console.error("Payment callback error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Callback failed",
+    });
+  }
+};
+
+// ==========================================
+// GET PAYMENT STATUS
+// ==========================================
+
+const getPaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID is required",
+      });
+    }
+
+    const payment = await Payment.findOne({
+      orderId,
+    }).populate(
+      "booking",
+      "startDate endDate totalAmount status paymentStatus",
+    );
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found",
+      });
+    }
+
+    // Check ownership
+    if (payment.user && payment.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to view this payment",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
       payment,
-      booking,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get payment status error:", error);
+
+    return res.status(500).json({
       success: false,
-      message: error.message,
-    });
-  }
-};
-
-
-// GET MY PAYMENTS
-
-const getMyPayments = async (req, res) => {
-  try {
-    const payments = await Payment.find({
-      user: req.user._id,
-    })
-      .populate({
-        path: "booking",
-        populate: {
-          path: "car",
-          select: "brand model image pricePerDay",
-        },
-      })
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: payments.length,
-      payments,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-
-// GET ALL PAYMENTS - ADMIN
-
-const getAllPayments = async (req, res) => {
-  try {
-    const payments = await Payment.find()
-      .populate("user", "name email")
-      .populate({
-        path: "booking",
-        populate: {
-          path: "car",
-          select: "brand model image pricePerDay",
-        },
-      })
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: payments.length,
-      payments,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
+      message: "Failed to get payment status",
+      error: error.message,
     });
   }
 };
 
 module.exports = {
   createPayment,
-  getMyPayments,
-  getAllPayments,
+  paymentCallback,
+  getPaymentStatus,
 };

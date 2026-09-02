@@ -2,9 +2,25 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// =========================
-// REGISTER
-// =========================
+// ========================================
+// GENERATE JWT TOKEN
+// ========================================
+
+const generateToken = (user) => {
+  return jwt.sign(
+    {
+      id: user._id,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d",
+    },
+  );
+};
+
+// ========================================
+// REGISTER USER
+// ========================================
 
 const registerUser = async (req, res) => {
   try {
@@ -17,44 +33,62 @@ const registerUser = async (req, res) => {
       });
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const normalizedName = name.trim();
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (!normalizedName) {
+      return res.status(400).json({
+        success: false,
+        message: "Name cannot be empty",
+      });
+    }
+
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Email cannot be empty",
+      });
+    }
+
+    // Check existing user
     const existingUser = await User.findOne({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
     });
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: "User already exists",
+        message: "User already exists. Please login.",
       });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: normalizedName,
+      email: normalizedEmail,
       password: hashedPassword,
       role: "user",
     });
 
-    const token = jwt.sign(
-      {
-        id: user._id,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    // Generate token
+    const token = generateToken(user);
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Registration successful",
-
       token,
-
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -63,16 +97,16 @@ const registerUser = async (req, res) => {
   } catch (error) {
     console.error("Register error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Registration failed",
     });
   }
 };
 
-// =========================
-// LOGIN
-// =========================
+// ========================================
+// LOGIN USER
+// ========================================
 
 const loginUser = async (req, res) => {
   try {
@@ -85,8 +119,11 @@ const loginUser = async (req, res) => {
       });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find user
     const user = await User.findOne({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
     });
 
     if (!user) {
@@ -96,10 +133,8 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const passwordMatch = await bcrypt.compare(
-      password,
-      user.password
-    );
+    // Check password
+    const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       return res.status(401).json({
@@ -108,24 +143,15 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: user._id,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    // Generate token
+    const token = generateToken(user);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Login successful",
-
       token,
-
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -134,14 +160,53 @@ const loginUser = async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Login failed",
     });
   }
 };
 
+// ========================================
+// GET PROFILE
+// ========================================
+
+const getProfile = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get profile",
+    });
+  }
+};
+
+// ========================================
+// EXPORTS
+// ========================================
+
 module.exports = {
   registerUser,
   loginUser,
+  getProfile,
 };
