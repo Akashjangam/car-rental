@@ -24,19 +24,13 @@ function Register() {
 
     setError("");
 
-    // ========================================
     // NAME VALIDATION
-    // ========================================
-
     if (!name.trim()) {
       setError("Name is required.");
       return;
     }
 
-    // ========================================
     // EMAIL VALIDATION
-    // ========================================
-
     if (!email.trim()) {
       setError("Email is required.");
       return;
@@ -49,10 +43,7 @@ function Register() {
       return;
     }
 
-    // ========================================
     // PASSWORD VALIDATION
-    // ========================================
-
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -61,42 +52,31 @@ function Register() {
     try {
       setLoading(true);
 
-      // ========================================
       // CREATE ACCOUNT
-      // ========================================
-
-      const data = await register({
+      const response = await register({
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
       });
 
-      // ========================================
-      // CHECK REGISTRATION SUCCESS
-      // ========================================
+      // Support both direct response and Axios response
+      const result = response?.data || response;
 
-      if (!data?.success) {
-        setError(data?.message || "Registration failed.");
+      console.log("Registration response:", response);
+
+      // CHECK SUCCESS
+      if (!result?.success) {
+        setError(result?.message || "Registration failed.");
         return;
       }
 
-      /*
-        Registration was successful.
-
-        AuthContext has already:
-        1. Saved the JWT
-        2. Updated the token state
-        3. Updated the user state
-
-        Therefore the user is automatically logged in.
-      */
-
       // ========================================
-      // SUCCESS MESSAGE
+      // SUCCESS ALERT
       // ========================================
 
-      const successMessage =
-        "Account created successfully! Welcome to DriveNow.";
+      window.alert(
+        "✓ Account created successfully!\n\nWelcome to DriveNow.",
+      );
 
       // ========================================
       // REDIRECT
@@ -106,9 +86,6 @@ function Register() {
 
       navigate(redirectPath, {
         replace: true,
-        state: {
-          registrationSuccess: successMessage,
-        },
       });
     } catch (err) {
       console.error("Registration error:", err);
@@ -127,9 +104,8 @@ function Register() {
     <main className="min-h-[calc(100vh-76px)] bg-background px-5 py-12 sm:px-8 lg:px-10">
       <div className="mx-auto flex min-h-[calc(100vh-160px)] max-w-[1400px] items-center justify-center">
         <div className="w-full max-w-lg">
-          {/* ========================================
-              BACK TO HOME
-          ======================================== */}
+
+          {/* BACK TO HOME */}
 
           <Link
             to="/"
@@ -139,13 +115,15 @@ function Register() {
             Back to home
           </Link>
 
-          {/* ========================================
-              HEADER
-          ======================================== */}
+          {/* HEADER */}
 
           <div className="mb-8">
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card text-primary">
-              <Car className="h-5 w-5" strokeWidth={1.7} aria-hidden="true" />
+              <Car
+                className="h-5 w-5"
+                strokeWidth={1.7}
+                aria-hidden="true"
+              />
             </div>
 
             <p className="mb-3 font-garamond text-sm font-semibold uppercase tracking-[0.2em] text-primary">
@@ -161,15 +139,12 @@ function Register() {
             </p>
           </div>
 
-          {/* ========================================
-              FORM CARD
-          ======================================== */}
+          {/* FORM CARD */}
 
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* ========================================
-                  NAME
-              ======================================== */}
+
+              {/* NAME */}
 
               <div>
                 <label
@@ -193,9 +168,7 @@ function Register() {
                 />
               </div>
 
-              {/* ========================================
-                  EMAIL
-              ======================================== */}
+              {/* EMAIL */}
 
               <div>
                 <label
@@ -216,20 +189,14 @@ function Register() {
                   autoComplete="email"
                   disabled={loading}
                   className="h-12 rounded-xl border-border bg-background font-garamond text-base"
-                  aria-describedby="email-hint"
                 />
 
-                <p
-                  id="email-hint"
-                  className="mt-2 font-garamond text-sm text-muted-foreground"
-                >
+                <p className="mt-2 font-garamond text-sm text-muted-foreground">
                   Use a valid email address such as Gmail, Outlook, or Yahoo.
                 </p>
               </div>
 
-              {/* ========================================
-                  PASSWORD
-              ======================================== */}
+              {/* PASSWORD */}
 
               <div>
                 <label
@@ -251,20 +218,14 @@ function Register() {
                   autoComplete="new-password"
                   disabled={loading}
                   className="h-12 rounded-xl border-border bg-background font-garamond text-base"
-                  aria-describedby="password-hint"
                 />
 
-                <p
-                  id="password-hint"
-                  className="mt-2 font-garamond text-sm text-muted-foreground"
-                >
+                <p className="mt-2 font-garamond text-sm text-muted-foreground">
                   Password must be at least 6 characters.
                 </p>
               </div>
 
-              {/* ========================================
-                  ERROR MESSAGE
-              ======================================== */}
+              {/* ERROR */}
 
               {error && (
                 <div
@@ -276,9 +237,7 @@ function Register() {
                 </div>
               )}
 
-              {/* ========================================
-                  SUBMIT BUTTON
-              ======================================== */}
+              {/* SUBMIT */}
 
               <Button
                 type="submit"
@@ -289,9 +248,7 @@ function Register() {
               </Button>
             </form>
 
-            {/* ========================================
-                LOGIN LINK
-            ======================================== */}
+            {/* LOGIN LINK */}
 
             <div className="mt-7 border-t border-border pt-6 text-center">
               <p className="font-garamond text-base text-muted-foreground">
@@ -306,15 +263,17 @@ function Register() {
             </div>
           </div>
 
-          {/* ========================================
-              BOTTOM NOTE
-          ======================================== */}
+          {/* BOTTOM NOTE */}
 
           <div className="mt-6 flex items-center justify-center gap-2 text-center font-garamond text-sm text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
+            <CheckCircle2
+              className="h-4 w-4 text-primary"
+              aria-hidden="true"
+            />
 
             <p>Create your account and start exploring.</p>
           </div>
+
         </div>
       </div>
     </main>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { CheckCircle2, X } from "lucide-react";
 
 import Hero from "../components/home/Hero";
@@ -10,9 +10,9 @@ import Testimonials from "../components/home/Testimonials";
 
 function Home() {
   const location = useLocation();
-  const navigate = useNavigate();
 
   const registrationSuccess = location.state?.registrationSuccess;
+
   const [showAlert, setShowAlert] = useState(Boolean(registrationSuccess));
 
   useEffect(() => {
@@ -20,23 +20,16 @@ function Home() {
 
     setShowAlert(true);
 
-    // Remove the message from navigation state
-    // so it does not appear again on refresh.
-    navigate(location.pathname, {
-      replace: true,
-      state: {},
-    });
-
     const timer = setTimeout(() => {
       setShowAlert(false);
     }, 4000);
 
     return () => clearTimeout(timer);
-  }, [registrationSuccess, navigate, location.pathname]);
+  }, [registrationSuccess]);
 
   return (
     <main>
-      {/* Registration Success Toast */}
+      {/* Registration Success Alert */}
       {showAlert && registrationSuccess && (
         <div
           role="alert"
@@ -49,11 +42,9 @@ function Home() {
               aria-hidden="true"
             />
 
-            <div className="min-w-0 flex-1">
-              <p className="font-garamond text-base font-semibold text-foreground">
-                {registrationSuccess}
-              </p>
-            </div>
+            <p className="flex-1 font-garamond text-base font-semibold text-foreground">
+              {registrationSuccess}
+            </p>
 
             <button
               type="button"
@@ -67,7 +58,6 @@ function Home() {
         </div>
       )}
 
-      {/* Home Sections */}
       <Hero />
 
       <SearchCars />
