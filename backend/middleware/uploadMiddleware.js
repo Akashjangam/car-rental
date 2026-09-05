@@ -1,37 +1,23 @@
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
 
-// UPLOAD DIRECTORY
+// ========================================
+// CLOUDINARY STORAGE
+// ========================================
 
-const uploadDirectory = path.join(__dirname, "../uploads");
-
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync(uploadDirectory)) {
-  fs.mkdirSync(uploadDirectory, {
-    recursive: true,
-  });
-}
-
-// STORAGE
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDirectory);
-  },
-
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname);
-
-    const fileName = `${Date.now()}-${Math.round(
-      Math.random() * 1e9,
-    )}${extension}`;
-
-    cb(null, fileName);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "drivenow/cars",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+    resource_type: "image",
   },
 });
 
+// ========================================
 // FILE FILTER
+// ========================================
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -43,17 +29,20 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// ========================================
 // MULTER
+// ========================================
 
 const upload = multer({
   storage,
   fileFilter,
-
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB
+    fileSize: 5 * 1024 * 1024,
   },
 });
 
+// ========================================
 // EXPORT
+// ========================================
 
 module.exports = upload;

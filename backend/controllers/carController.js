@@ -44,10 +44,10 @@ const createCar = async (req, res) => {
 
       available: available === "false" ? false : true,
 
-      image: req.file ? `/uploads/${req.file.filename}` : "",
+      // Cloudinary image URL
+      image: req.file ? req.file.path : "",
 
-      // IMPORTANT:
-      // Admin-added cars do not have a dealer.
+      // Admin-created cars have no dealer
       dealer: null,
     });
 
@@ -96,7 +96,6 @@ const getCarById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate ID
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         success: false,
@@ -134,7 +133,6 @@ const updateCar = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate ID
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         success: false,
@@ -205,22 +203,13 @@ const updateCar = async (req, res) => {
     }
 
     // UPDATE IMAGE
+    // Cloudinary returns the permanent image URL in req.file.path
 
     if (req.file) {
-      car.image = `/uploads/${req.file.filename}`;
+      car.image = req.file.path;
     }
 
-    // IMPORTANT
-
-    //
-    // Admin does NOT assign a dealer.
-    //
-    // If this car already belongs to a dealer,
-    // leave that dealer unchanged.
-    //
-    // If it is an admin-created car, dealer
-    // remains null.
-    //
+    // Do not change dealer ownership
 
     await car.save();
 
@@ -246,7 +235,6 @@ const deleteCar = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate ID
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         success: false,
@@ -281,7 +269,6 @@ const deleteCar = async (req, res) => {
 };
 
 // EXPORTS
-//
 
 module.exports = {
   createCar,

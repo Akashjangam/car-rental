@@ -37,20 +37,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const response = await getProfile(storedToken);
 
-        /*
-          Backend normally returns:
-
-          {
-            success: true,
-            user: {
-              _id,
-              name,
-              email,
-              role
-            }
-          }
-        */
-
         const userData =
           response?.user || response?.data?.user || response?.data || null;
 
@@ -65,15 +51,6 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error("Failed to restore authentication:", error);
 
-        /*
-          Only remove the token when the server
-          explicitly says the authentication token
-          is invalid/unauthorized.
-
-          This prevents accidental logout because
-          of temporary server/network errors.
-        */
-
         const status = error?.response?.status;
 
         if (status === 401) {
@@ -84,11 +61,6 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
           }
         } else {
-          /*
-            Keep the token if the problem is not
-            an authentication error.
-          */
-
           if (mounted) {
             setToken(storedToken);
           }
@@ -113,6 +85,75 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     const response = await registerUser(userData);
+
+    /*
+      Backend returns:
+
+      {
+        success: true,
+        message: "Registration successful",
+        token: "...",
+        user: {
+          _id,
+          name,
+          email,
+          role
+        }
+      }
+    */
+
+    const newToken = response?.token || response?.data?.token;
+
+    const registeredUser = response?.user || response?.data?.user || null;
+
+    // Registration succeeded but token was not returned
+    if (!newToken) {
+      throw new Error(
+        "Registration succeeded, but authentication token was not received.",
+      );
+    }
+
+    // Save token
+    localStorage.setItem("token", newToken);
+
+    // Update authentication state
+    setToken(newToken);
+
+    // Update user state
+    if (registeredUser?._id) {
+      setUser(registeredUser);
+    } else {
+      /*
+        Fallback:
+        If backend doesn't return the user object,
+        fetch the profile using the new token.
+      */
+
+      try {
+        const profileResponse = await getProfile(newToken);
+
+        const profileUser =
+          profileResponse?.user ||
+          profileResponse?.data?.user ||
+          profileResponse?.data ||
+          null;
+
+        if (!profileUser?._id) {
+          throw new Error("Invalid profile received after registration.");
+        }
+
+        setUser(profileUser);
+      } catch (error) {
+        console.error("Failed to load profile after registration:", error);
+
+        /*
+          Token is still valid and stored.
+          The profile can be loaded again later.
+        */
+
+        setUser(null);
+      }
+    }
 
     return response;
   };

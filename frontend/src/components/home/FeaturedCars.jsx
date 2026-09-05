@@ -20,8 +20,9 @@ function FeaturedCars() {
   const [isHovered, setIsHovered] = useState(false);
 
   // ============================================================
-  // FETCH FEATURED CARS
+  // FETCH CARS
   // ============================================================
+
   useEffect(() => {
     let mounted = true;
 
@@ -30,10 +31,7 @@ function FeaturedCars() {
         setLoading(true);
         setError("");
 
-        const response = await getCars({
-          available: true,
-          sort: "newest",
-        });
+        const response = await getCars();
 
         const carData =
           response?.cars ||
@@ -42,19 +40,24 @@ function FeaturedCars() {
           response ||
           [];
 
-        const featuredCars = Array.isArray(carData) ? carData : [];
-
         if (!mounted) {
           return;
         }
 
-        setCars(featuredCars);
+        const allCars = Array.isArray(carData) ? carData : [];
+
+        // Show available cars first.
+        // Backend currently returns the complete car list.
+        const availableCars = allCars.filter((car) => car?.available !== false);
+
+        setCars(availableCars);
 
         // ========================================================
-        // FETCH REVIEWS FOR EACH CAR
+        // FETCH REVIEWS
         // ========================================================
+
         const reviewResults = await Promise.all(
-          featuredCars.map(async (car) => {
+          availableCars.map(async (car) => {
             const carId = car?._id || car?.id;
 
             if (!carId) {
@@ -125,6 +128,7 @@ function FeaturedCars() {
   // ============================================================
   // RESET CAROUSEL
   // ============================================================
+
   useEffect(() => {
     setCurrentIndex(0);
   }, [cars.length]);
@@ -132,6 +136,7 @@ function FeaturedCars() {
   // ============================================================
   // AUTO SLIDE
   // ============================================================
+
   useEffect(() => {
     if (loading || cars.length <= 1 || isHovered) {
       return;
@@ -155,25 +160,25 @@ function FeaturedCars() {
   // ============================================================
   // IMAGE URL
   // ============================================================
+
   const getImageUrl = (image) => {
-    if (!image) {
+    if (!image || typeof image !== "string") {
       return CarHero;
     }
 
-    if (typeof image !== "string") {
-      return CarHero;
-    }
-
-    if (image.startsWith("http")) {
+    // Cloudinary / external image
+    if (image.startsWith("http://") || image.startsWith("https://")) {
       return image;
     }
 
+    // Local backend image
     return `${API_URL}${image.startsWith("/") ? image : `/${image}`}`;
   };
 
   // ============================================================
   // IMAGE ERROR HANDLER
   // ============================================================
+
   const handleImageError = (event) => {
     if (event.currentTarget.dataset.fallback === "true") {
       return;
@@ -186,6 +191,7 @@ function FeaturedCars() {
   // ============================================================
   // VISIBLE CARS
   // ============================================================
+
   const visibleCars = useMemo(() => {
     if (!cars.length) {
       return [];
@@ -201,6 +207,7 @@ function FeaturedCars() {
   // ============================================================
   // PREVIOUS
   // ============================================================
+
   const handlePrevious = () => {
     if (!cars.length) {
       return;
@@ -218,6 +225,7 @@ function FeaturedCars() {
   // ============================================================
   // NEXT
   // ============================================================
+
   const handleNext = () => {
     if (!cars.length) {
       return;
@@ -233,22 +241,29 @@ function FeaturedCars() {
   };
 
   return (
-    <section className="bg-background px-4 py-14 sm:px-6 sm:py-16 lg:py-20">
+    <section
+      className="bg-background px-4 py-14 sm:px-6 sm:py-16 lg:py-20"
+      aria-labelledby="featured-cars-heading"
+    >
       <div className="mx-auto max-w-7xl">
         {/* ======================================================
             SECTION HEADER
         ======================================================= */}
+
         <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <div className="mb-3 flex items-center gap-3">
-              <span className="h-px w-7 bg-primary" />
+              <span className="h-px w-7 bg-primary" aria-hidden="true" />
 
-              <p className="font-garamond text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+              <p className="font-garamond text-[11px] font-semibold uppercase tracking-[0.2em] text-primary sm:text-xs">
                 Our Fleet
               </p>
             </div>
 
-            <h2 className="font-metal text-4xl leading-none tracking-tight text-foreground sm:text-5xl">
+            <h2
+              id="featured-cars-heading"
+              className="font-metal text-4xl leading-none tracking-tight text-foreground sm:text-5xl"
+            >
               Featured Cars
             </h2>
 
@@ -261,6 +276,7 @@ function FeaturedCars() {
           {/* ====================================================
               HEADER ACTIONS
           ===================================================== */}
+
           <div className="flex items-center gap-4">
             <Link
               to="/cars"
@@ -274,11 +290,14 @@ function FeaturedCars() {
             </Link>
 
             {!loading && cars.length > 1 && (
-              <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-2"
+                aria-label="Featured car controls"
+              >
                 <button
                   type="button"
                   onClick={handlePrevious}
-                  aria-label="Previous car"
+                  aria-label="Previous featured car"
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -287,7 +306,7 @@ function FeaturedCars() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  aria-label="Next car"
+                  aria-label="Next featured car"
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                 >
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -300,8 +319,12 @@ function FeaturedCars() {
         {/* ======================================================
             LOADING
         ======================================================= */}
+
         {loading && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            aria-label="Loading featured cars"
+          >
             {[1, 2, 3].map((item) => (
               <div
                 key={item}
@@ -328,6 +351,7 @@ function FeaturedCars() {
         {/* ======================================================
             ERROR
         ======================================================= */}
+
         {!loading && error && (
           <div
             className="rounded-2xl border border-destructive/30 bg-destructive/5 p-8 text-center"
@@ -353,6 +377,7 @@ function FeaturedCars() {
         {/* ======================================================
             EMPTY
         ======================================================= */}
+
         {!loading && !error && cars.length === 0 && (
           <div className="rounded-2xl border border-border bg-card p-10 text-center">
             <h3 className="font-metal text-2xl text-foreground">
@@ -368,6 +393,7 @@ function FeaturedCars() {
         {/* ======================================================
             CAROUSEL
         ======================================================= */}
+
         {!loading && !error && cars.length > 0 && (
           <div
             className="relative overflow-hidden"
@@ -377,6 +403,7 @@ function FeaturedCars() {
             {/* ==================================================
                 MOBILE
             =================================================== */}
+
             <div className="sm:hidden">
               {visibleCars.slice(0, 1).map((car) => (
                 <CarCard
@@ -392,6 +419,7 @@ function FeaturedCars() {
             {/* ==================================================
                 TABLET
             =================================================== */}
+
             <div className="hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
               {visibleCars.slice(0, 2).map((car, index) => (
                 <CarCard
@@ -407,6 +435,7 @@ function FeaturedCars() {
             {/* ==================================================
                 DESKTOP
             =================================================== */}
+
             <div className="hidden gap-6 lg:grid lg:grid-cols-3">
               {visibleCars.map((car, index) => (
                 <CarCard
@@ -424,6 +453,7 @@ function FeaturedCars() {
         {/* ======================================================
             CAROUSEL INDICATORS
         ======================================================= */}
+
         {!loading && !error && cars.length > 1 && (
           <div
             className="mt-7 flex items-center justify-center gap-2"
@@ -434,7 +464,7 @@ function FeaturedCars() {
                 key={car?._id || car?.id || index}
                 type="button"
                 onClick={() => setCurrentIndex(index)}
-                aria-label={`Show car ${index + 1}`}
+                aria-label={`Show featured car ${index + 1}`}
                 aria-current={currentIndex === index ? "true" : undefined}
                 className={`h-2 rounded-full transition-all ${
                   currentIndex === index
@@ -453,6 +483,7 @@ function FeaturedCars() {
 // ================================================================
 // CAR CARD
 // ================================================================
+
 function CarCard({ car, reviews, getImageUrl, handleImageError }) {
   const carId = car?._id || car?.id;
 
@@ -468,6 +499,7 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
       {/* ======================================================
           IMAGE
       ======================================================= */}
+
       <div className="relative h-56 overflow-hidden bg-muted sm:h-60">
         <img
           src={getImageUrl(car?.image)}
@@ -476,9 +508,8 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
           onError={handleImageError}
         />
 
-        {/* ====================================================
-            AVAILABLE BADGE
-        ===================================================== */}
+        {/* Available Badge */}
+
         {car?.available && (
           <span className="absolute left-4 top-4 rounded-full border border-border/50 bg-background/95 px-3 py-1 font-garamond text-xs font-semibold text-primary shadow-sm backdrop-blur-sm">
             Available
@@ -489,10 +520,12 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
       {/* ======================================================
           CONTENT
       ======================================================= */}
+
       <div className="p-5">
         {/* ====================================================
             NAME + PRICE
         ===================================================== */}
+
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="font-metal text-2xl leading-tight text-card-foreground">
@@ -516,6 +549,7 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
         {/* ====================================================
             REVIEWS
         ===================================================== */}
+
         <div className="mt-4 flex items-center gap-2">
           <div className="flex items-center gap-1">
             <Star
@@ -544,8 +578,10 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
         {/* ====================================================
             FEATURES
         ===================================================== */}
+
         <div className="mt-5 grid grid-cols-3 border-y border-border py-4">
           {/* Fuel */}
+
           <div className="flex flex-col items-center gap-1.5 text-center">
             <Fuel
               className="h-4 w-4 text-muted-foreground"
@@ -558,6 +594,7 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
           </div>
 
           {/* Transmission */}
+
           <div className="flex flex-col items-center gap-1.5 border-x border-border text-center">
             <Gauge
               className="h-4 w-4 text-muted-foreground"
@@ -570,6 +607,7 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
           </div>
 
           {/* Seats */}
+
           <div className="flex flex-col items-center gap-1.5 text-center">
             <Users
               className="h-4 w-4 text-muted-foreground"
@@ -585,6 +623,7 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
         {/* ====================================================
             VIEW DETAILS
         ===================================================== */}
+
         <Link
           to={`/cars/${carId}`}
           className="group/button mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-foreground px-4 font-garamond text-sm font-semibold text-background transition hover:bg-primary hover:text-primary-foreground focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"

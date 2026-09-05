@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Car } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Car, CheckCircle2 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -8,6 +8,8 @@ import { useAuth } from "../context/AuthContext";
 
 function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const { register } = useAuth();
 
   const [name, setName] = useState("");
@@ -22,19 +24,24 @@ function Register() {
 
     setError("");
 
-    // Name validation
+    // ========================================
+    // NAME VALIDATION
+    // ========================================
+
     if (!name.trim()) {
       setError("Name is required.");
       return;
     }
 
-    // Email required validation
+    // ========================================
+    // EMAIL VALIDATION
+    // ========================================
+
     if (!email.trim()) {
       setError("Email is required.");
       return;
     }
 
-    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(email.trim())) {
@@ -42,7 +49,10 @@ function Register() {
       return;
     }
 
-    // Password validation
+    // ========================================
+    // PASSWORD VALIDATION
+    // ========================================
+
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -51,23 +61,61 @@ function Register() {
     try {
       setLoading(true);
 
+      // ========================================
+      // CREATE ACCOUNT
+      // ========================================
+
       const data = await register({
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
       });
 
+      // ========================================
+      // CHECK REGISTRATION SUCCESS
+      // ========================================
+
       if (!data?.success) {
         setError(data?.message || "Registration failed.");
         return;
       }
 
-      navigate("/");
+      /*
+        Registration was successful.
+
+        AuthContext has already:
+        1. Saved the JWT
+        2. Updated the token state
+        3. Updated the user state
+
+        Therefore the user is automatically logged in.
+      */
+
+      // ========================================
+      // SUCCESS MESSAGE
+      // ========================================
+
+      const successMessage =
+        "Account created successfully! Welcome to DriveNow.";
+
+      // ========================================
+      // REDIRECT
+      // ========================================
+
+      const redirectPath = location.state?.from || "/";
+
+      navigate(redirectPath, {
+        replace: true,
+        state: {
+          registrationSuccess: successMessage,
+        },
+      });
     } catch (err) {
       console.error("Registration error:", err);
 
       setError(
         err?.response?.data?.message ||
+          err?.message ||
           "Registration failed. Please try again.",
       );
     } finally {
@@ -79,7 +127,10 @@ function Register() {
     <main className="min-h-[calc(100vh-76px)] bg-background px-5 py-12 sm:px-8 lg:px-10">
       <div className="mx-auto flex min-h-[calc(100vh-160px)] max-w-[1400px] items-center justify-center">
         <div className="w-full max-w-lg">
-          {/* Back */}
+          {/* ========================================
+              BACK TO HOME
+          ======================================== */}
+
           <Link
             to="/"
             className="mb-8 inline-flex items-center gap-2 font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -88,7 +139,10 @@ function Register() {
             Back to home
           </Link>
 
-          {/* Header */}
+          {/* ========================================
+              HEADER
+          ======================================== */}
+
           <div className="mb-8">
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card text-primary">
               <Car className="h-5 w-5" strokeWidth={1.7} aria-hidden="true" />
@@ -107,10 +161,16 @@ function Register() {
             </p>
           </div>
 
-          {/* Form */}
+          {/* ========================================
+              FORM CARD
+          ======================================== */}
+
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name */}
+              {/* ========================================
+                  NAME
+              ======================================== */}
+
               <div>
                 <label
                   htmlFor="name"
@@ -133,7 +193,10 @@ function Register() {
                 />
               </div>
 
-              {/* Email */}
+              {/* ========================================
+                  EMAIL
+              ======================================== */}
+
               <div>
                 <label
                   htmlFor="email"
@@ -164,7 +227,10 @@ function Register() {
                 </p>
               </div>
 
-              {/* Password */}
+              {/* ========================================
+                  PASSWORD
+              ======================================== */}
+
               <div>
                 <label
                   htmlFor="password"
@@ -196,7 +262,10 @@ function Register() {
                 </p>
               </div>
 
-              {/* Error */}
+              {/* ========================================
+                  ERROR MESSAGE
+              ======================================== */}
+
               {error && (
                 <div
                   role="alert"
@@ -207,7 +276,10 @@ function Register() {
                 </div>
               )}
 
-              {/* Submit */}
+              {/* ========================================
+                  SUBMIT BUTTON
+              ======================================== */}
+
               <Button
                 type="submit"
                 disabled={loading}
@@ -217,7 +289,10 @@ function Register() {
               </Button>
             </form>
 
-            {/* Login */}
+            {/* ========================================
+                LOGIN LINK
+            ======================================== */}
+
             <div className="mt-7 border-t border-border pt-6 text-center">
               <p className="font-garamond text-base text-muted-foreground">
                 Already have an account?{" "}
@@ -231,10 +306,15 @@ function Register() {
             </div>
           </div>
 
-          {/* Bottom Note */}
-          <p className="mt-6 text-center font-garamond text-sm text-muted-foreground">
-            Create your account and start exploring.
-          </p>
+          {/* ========================================
+              BOTTOM NOTE
+          ======================================== */}
+
+          <div className="mt-6 flex items-center justify-center gap-2 text-center font-garamond text-sm text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
+
+            <p>Create your account and start exploring.</p>
+          </div>
         </div>
       </div>
     </main>

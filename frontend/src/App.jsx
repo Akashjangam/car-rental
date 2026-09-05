@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Layout
@@ -8,123 +9,148 @@ import Footer from "./components/layout/Footer";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // Public Pages
-import Home from "./pages/Home";
-import Cars from "./pages/cars/Cars";
-import CarDetails from "./pages/cars/CarDetails";
-import SavedCars from "./pages/cars/SavedCars";
-import About from "./pages/About";
-import HowItWorks from "./pages/HowItWorks";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+const Home = lazy(() => import("./pages/Home"));
+const Cars = lazy(() => import("./pages/cars/Cars"));
+const CarDetails = lazy(() => import("./pages/cars/CarDetails"));
+const SavedCars = lazy(() => import("./pages/cars/SavedCars"));
+const About = lazy(() => import("./pages/About"));
+const HowItWorks = lazy(() => import("./pages/HowItWorks"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 
 // User Booking
-import BookingCreate from "./pages/booking/BookingCreate";
-import BookingSuccess from "./pages/booking/BookingSuccess";
-import MyBookings from "./pages/booking/MyBookings";
+const BookingCreate = lazy(() => import("./pages/booking/BookingCreate"));
+const BookingSuccess = lazy(() => import("./pages/booking/BookingSuccess"));
+const MyBookings = lazy(() => import("./pages/booking/MyBookings"));
 
 // Payment
-import Payment from "./pages/payment/Payment";
-import PaymentResult from "./pages/payment/PaymentResult";
+const Payment = lazy(() => import("./pages/payment/Payment"));
+const PaymentResult = lazy(() => import("./pages/payment/PaymentResult"));
 
 // Dealer
-import DealerCars from "./pages/dealer/DealerCars";
-import AddCar from "./pages/dealer/AddCar";
-import EditCar from "./pages/dealer/EditCar";
+const DealerCars = lazy(() => import("./pages/dealer/DealerCars"));
+const AddCar = lazy(() => import("./pages/dealer/AddCar"));
+const EditCar = lazy(() => import("./pages/dealer/EditCar"));
 
 // Admin
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminCars from "./pages/admin/AdminCars";
-import AdminCarsAdd from "./pages/admin/AdminCarsAdd";
-import AdminCarsEdit from "./pages/admin/AdminCarsEdit";
-import AdminBookings from "./pages/admin/AdminBookings";
-import AdminMembers from "./pages/admin/AdminMembers";
-import AdminMemberAdd from "./pages/admin/AdminMemberAdd";
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminCars = lazy(() => import("./pages/admin/AdminCars"));
+const AdminCarsAdd = lazy(() => import("./pages/admin/AdminCarsAdd"));
+const AdminCarsEdit = lazy(() => import("./pages/admin/AdminCarsEdit"));
+const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
+const AdminMembers = lazy(() => import("./pages/admin/AdminMembers"));
+const AdminMemberAdd = lazy(() => import("./pages/admin/AdminMemberAdd"));
+
+const PageLoader = () => (
+  <div
+    className="flex min-h-[60vh] items-center justify-center px-4"
+    role="status"
+    aria-live="polite"
+    aria-label="Loading page"
+  >
+    <div className="text-center">
+      <div
+        className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary"
+        aria-hidden="true"
+      />
+
+      <p className="mt-4 font-garamond text-lg text-muted-foreground">
+        Loading...
+      </p>
+    </div>
+  </div>
+);
 
 function App() {
   return (
     <BrowserRouter>
       <Navbar />
 
-      <Routes>
-        {/* ==================== PUBLIC ==================== */}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* ==================== PUBLIC ==================== */}
 
-        <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home />} />
 
-        <Route path="/cars" element={<Cars />} />
+          <Route path="/cars" element={<Cars />} />
 
-        <Route path="/cars/:id" element={<CarDetails />} />
+          <Route path="/cars/:id" element={<CarDetails />} />
 
-        <Route path="/about" element={<About />} />
+          <Route path="/about" element={<About />} />
 
-        <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
 
-        <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login />} />
 
-        <Route path="/register" element={<Register />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* ==================== USER ==================== */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
-          <Route path="/booking/:carId" element={<BookingCreate />} />
+          {/* ==================== USER ==================== */}
 
-          <Route path="/booking-success" element={<BookingSuccess />} />
+          <Route element={<ProtectedRoute allowedRoles={["user", "admin"]} />}>
+            <Route path="/booking/:carId" element={<BookingCreate />} />
 
-          <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/booking-success" element={<BookingSuccess />} />
 
-          <Route path="/payment/:bookingId" element={<Payment />} />
+            <Route path="/my-bookings" element={<MyBookings />} />
 
-          <Route path="/payment-result" element={<PaymentResult />} />
+            <Route path="/payment/:bookingId" element={<Payment />} />
 
-          <Route path="/saved-cars" element={<SavedCars />} />
-        </Route>
+            <Route path="/payment-result" element={<PaymentResult />} />
 
-        {/* ==================== DEALER ==================== */}
+            <Route path="/saved-cars" element={<SavedCars />} />
+          </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={["dealer"]} />}>
-          <Route path="/dealer/cars" element={<DealerCars />} />
+          {/* ==================== DEALER ==================== */}
 
-          <Route path="/dealer/cars/add" element={<AddCar />} />
+          <Route element={<ProtectedRoute allowedRoles={["dealer"]} />}>
+            <Route path="/dealer/cars" element={<DealerCars />} />
 
-          <Route path="/dealer/cars/edit/:id" element={<EditCar />} />
-        </Route>
+            <Route path="/dealer/cars/add" element={<AddCar />} />
 
-        {/* ==================== ADMIN ==================== */}
+            <Route path="/dealer/cars/edit/:id" element={<EditCar />} />
+          </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-          <Route path="/admin" element={<AdminDashboard />} />
+          {/* ==================== ADMIN ==================== */}
 
-          <Route path="/admin/cars" element={<AdminCars />} />
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/admin" element={<AdminDashboard />} />
 
-          <Route path="/admin/cars/add" element={<AdminCarsAdd />} />
+            <Route path="/admin/cars" element={<AdminCars />} />
 
-          <Route path="/admin/cars/edit/:id" element={<AdminCarsEdit />} />
+            <Route path="/admin/cars/add" element={<AdminCarsAdd />} />
 
-          <Route path="/admin/bookings" element={<AdminBookings />} />
+            <Route path="/admin/cars/edit/:id" element={<AdminCarsEdit />} />
 
-          <Route path="/admin/members" element={<AdminMembers />} />
+            <Route path="/admin/bookings" element={<AdminBookings />} />
 
-          <Route path="/admin/members/add" element={<AdminMemberAdd />} />
-        </Route>
+            <Route path="/admin/members" element={<AdminMembers />} />
 
-        {/* ==================== 404 ==================== */}
+            <Route path="/admin/members/add" element={<AdminMemberAdd />} />
+          </Route>
 
-        <Route
-          path="*"
-          element={
-            <div className="flex min-h-[60vh] items-center justify-center px-4">
-              <div className="text-center">
-                <h1 className="font-metal text-5xl font-bold text-foreground">
-                  404
-                </h1>
+          {/* ==================== 404 ==================== */}
 
-                <p className="mt-3 font-garamond text-lg text-muted-foreground">
-                  Page not found
-                </p>
+          <Route
+            path="*"
+            element={
+              <div className="flex min-h-[60vh] items-center justify-center px-4">
+                <div className="text-center">
+                  <h1 className="font-metal text-5xl font-bold text-foreground">
+                    404
+                  </h1>
+
+                  <p className="mt-3 font-garamond text-lg text-muted-foreground">
+                    Page not found
+                  </p>
+                </div>
               </div>
-            </div>
-          }
-        />
-      </Routes>
+            }
+          />
+        </Routes>
+      </Suspense>
 
       <Footer />
     </BrowserRouter>

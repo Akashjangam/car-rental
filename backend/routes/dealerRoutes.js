@@ -14,8 +14,12 @@ const {
 
 const router = express.Router();
 
+// ========================================
 // DEALER PROFILE
+// ========================================
 
+// Get dealer profile
+// GET /api/dealer/profile
 router.get("/profile", protect, dealer, (req, res) => {
   res.status(200).json({
     success: true,
@@ -24,18 +28,24 @@ router.get("/profile", protect, dealer, (req, res) => {
   });
 });
 
+// ========================================
 // DEALER CARS
+// ========================================
 
 // Get all dealer cars
+// GET /api/dealer/cars
 router.get("/cars", protect, dealer, getDealerCars);
 
 // Get single dealer car
+// GET /api/dealer/cars/:id
 router.get("/cars/:id", protect, dealer, getDealerCarById);
 
 // Create dealer car
+// POST /api/dealer/cars
 router.post("/cars", protect, dealer, upload.single("image"), createDealerCar);
 
 // Update dealer car
+// PUT /api/dealer/cars/:id
 router.put(
   "/cars/:id",
   protect,
@@ -45,6 +55,7 @@ router.put(
 );
 
 // Delete dealer car
+// DELETE /api/dealer/cars/:id
 router.delete("/cars/:id", protect, dealer, deleteDealerCar);
 
 module.exports = router;

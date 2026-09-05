@@ -1,5 +1,11 @@
 import { Link } from "react-router-dom";
-import { Car, Mail, MapPin, Phone, ArrowUpRight } from "lucide-react";
+import {
+  Car,
+  Mail,
+  MapPin,
+  Phone,
+  ArrowUpRight,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const Footer = () => {
@@ -9,8 +15,8 @@ const Footer = () => {
   const footerLinkClass =
     "font-garamond text-lg text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
-  const socialLinkClass =
-    "flex h-10 w-10 items-center justify-center rounded-full border border-border font-garamond text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  const contactLinkClass =
+    "font-garamond text-lg text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   return (
     <footer className="border-t border-border bg-background">
@@ -21,11 +27,15 @@ const Footer = () => {
           <div>
             <Link
               to="/"
-              className="group flex w-fit items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="group flex w-fit items-center gap-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="DriveNow home"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary transition group-hover:border-primary">
-                <Car className="h-5 w-5" strokeWidth={1.7} aria-hidden="true" />
+                <Car
+                  className="h-5 w-5"
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
               </div>
 
               <span className="font-metal text-2xl tracking-tight text-foreground">
@@ -34,33 +44,17 @@ const Footer = () => {
             </Link>
 
             <p className="mt-6 max-w-sm font-garamond text-lg leading-7 text-muted-foreground">
-              A simple way to find the right car for every journey. Reliable
-              vehicles, flexible rentals, and a smoother way to travel.
+              A simple way to find the right car for every journey.
+              Reliable vehicles, flexible rentals, and a smoother way
+              to travel.
             </p>
-
-            {/* Social */}
-            <div className="mt-7 flex gap-2.5" aria-label="Social media">
-              <a href="#" aria-label="Instagram" className={socialLinkClass}>
-                IG
-              </a>
-
-              <a
-                href="#"
-                aria-label="Facebook"
-                className={`${socialLinkClass} text-base`}
-              >
-                f
-              </a>
-
-              <a href="#" aria-label="X" className={socialLinkClass}>
-                X
-              </a>
-            </div>
           </div>
 
           {/* Explore */}
           <div>
-            <h3 className="font-metal text-xl text-foreground">Explore</h3>
+            <h3 className="font-metal text-xl text-foreground">
+              Explore
+            </h3>
 
             <ul className="mt-6 space-y-3.5">
               <li>
@@ -82,14 +76,20 @@ const Footer = () => {
               </li>
 
               <li>
-                <Link to="/how-it-works" className={footerLinkClass}>
+                <Link
+                  to="/how-it-works"
+                  className={footerLinkClass}
+                >
                   How It Works
                 </Link>
               </li>
 
               {!loading && user && (
                 <li>
-                  <Link to="/saved-cars" className={footerLinkClass}>
+                  <Link
+                    to="/saved-cars"
+                    className={footerLinkClass}
+                  >
                     Saved Cars
                   </Link>
                 </li>
@@ -99,7 +99,9 @@ const Footer = () => {
 
           {/* Services */}
           <div>
-            <h3 className="font-metal text-xl text-foreground">Services</h3>
+            <h3 className="font-metal text-xl text-foreground">
+              Services
+            </h3>
 
             <ul className="mt-6 space-y-3.5">
               <li>
@@ -108,33 +110,55 @@ const Footer = () => {
                 </Link>
               </li>
 
-              {!loading && !user && (
-                <li>
-                  <Link to="/register" className={footerLinkClass}>
-                    Become a Dealer
-                  </Link>
-                </li>
-              )}
-
               {!loading && user && (
                 <li>
-                  <Link to="/my-bookings" className={footerLinkClass}>
+                  <Link
+                    to="/my-bookings"
+                    className={footerLinkClass}
+                  >
                     My Bookings
                   </Link>
                 </li>
               )}
 
               <li>
-                <Link to="/how-it-works" className={footerLinkClass}>
+                <Link
+                  to="/how-it-works"
+                  className={footerLinkClass}
+                >
                   Rental Guide
                 </Link>
               </li>
+
+              {!loading && user?.role === "dealer" && (
+                <li>
+                  <Link
+                    to="/dealer/cars"
+                    className={footerLinkClass}
+                  >
+                    Dealer Dashboard
+                  </Link>
+                </li>
+              )}
+
+              {!loading && user?.role === "admin" && (
+                <li>
+                  <Link
+                    to="/admin"
+                    className={footerLinkClass}
+                  >
+                    Admin Dashboard
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="font-metal text-xl text-foreground">Contact</h3>
+            <h3 className="font-metal text-xl text-foreground">
+              Contact
+            </h3>
 
             <div className="mt-6 space-y-5">
               <div className="flex items-start gap-3">
@@ -158,7 +182,10 @@ const Footer = () => {
                   aria-hidden="true"
                 />
 
-                <a href="tel:+919848256694" className={footerLinkClass}>
+                <a
+                  href="tel:+919848256694"
+                  className={contactLinkClass}
+                >
                   +91 9848256694
                 </a>
               </div>
@@ -172,7 +199,7 @@ const Footer = () => {
 
                 <a
                   href="mailto:support@drivenow.com"
-                  className={`${footerLinkClass} break-all`}
+                  className={`${contactLinkClass} break-all`}
                 >
                   support@drivenow.com
                 </a>
@@ -190,27 +217,25 @@ const Footer = () => {
             © {currentYear} DriveNow. All rights reserved.
           </p>
 
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <a
-              href="#"
-              className="font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <span className="font-garamond text-base text-muted-foreground">
               Privacy Policy
-            </a>
+            </span>
 
-            <a
-              href="#"
-              className="font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
+            <span className="font-garamond text-base text-muted-foreground">
               Terms & Conditions
-            </a>
+            </span>
 
             <a
-              href="#"
+              href="mailto:support@drivenow.com"
               className="inline-flex items-center gap-1 font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Support
-              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+
+              <ArrowUpRight
+                className="h-3.5 w-3.5"
+                aria-hidden="true"
+              />
             </a>
           </div>
         </div>

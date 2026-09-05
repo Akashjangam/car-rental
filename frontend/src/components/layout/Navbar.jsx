@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   CarFront,
@@ -11,7 +12,6 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import { useAuth } from "../../context/AuthContext";
 
@@ -57,6 +57,8 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  const isSectionActive = (path) => location.pathname.startsWith(path);
+
   const navLinkClass = (path) =>
     `relative flex items-center py-2 font-garamond text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
       isActive(path)
@@ -64,9 +66,9 @@ const Navbar = () => {
         : "text-foreground/75 hover:text-foreground"
     }`;
 
-  const roleLinkClass = (isRoleActive) =>
-    `flex items-center gap-1.5 font-garamond text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-      isRoleActive ? "text-primary" : "text-foreground/75 hover:text-foreground"
+  const roleLinkClass = (active) =>
+    `flex items-center gap-1.5 rounded-md font-garamond text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+      active ? "text-primary" : "text-foreground/75 hover:text-foreground"
     }`;
 
   return (
@@ -76,7 +78,7 @@ const Navbar = () => {
         <Link
           to="/"
           onClick={closeMobile}
-          className="group flex shrink-0 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="group flex shrink-0 items-center gap-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label="DriveNow home"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-primary transition group-hover:border-primary">
@@ -100,45 +102,71 @@ const Navbar = () => {
           <Link to="/" className={navLinkClass("/")}>
             Home
             {isActive("/") && (
-              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+              <span
+                className="absolute -bottom-1 left-0 h-px w-full bg-primary"
+                aria-hidden="true"
+              />
             )}
           </Link>
 
           <Link to="/cars" className={navLinkClass("/cars")}>
             Cars
             {isActive("/cars") && (
-              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+              <span
+                className="absolute -bottom-1 left-0 h-px w-full bg-primary"
+                aria-hidden="true"
+              />
             )}
           </Link>
 
           <Link to="/about" className={navLinkClass("/about")}>
             About
             {isActive("/about") && (
-              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+              <span
+                className="absolute -bottom-1 left-0 h-px w-full bg-primary"
+                aria-hidden="true"
+              />
             )}
           </Link>
 
           <Link to="/how-it-works" className={navLinkClass("/how-it-works")}>
             How It Works
             {isActive("/how-it-works") && (
-              <span className="absolute -bottom-1 left-0 h-px w-full bg-primary" />
+              <span
+                className="absolute -bottom-1 left-0 h-px w-full bg-primary"
+                aria-hidden="true"
+              />
             )}
           </Link>
 
+          {/* Dealer Navigation */}
           {isDealer && (
-            <Link
-              to="/dealer/cars"
-              className={roleLinkClass(location.pathname.startsWith("/dealer"))}
-            >
-              <CarFront className="h-4 w-4" aria-hidden="true" />
-              My Cars
-            </Link>
+            <>
+              <Link
+                to="/dealer/cars"
+                className={roleLinkClass(isSectionActive("/dealer"))}
+              >
+                <CarFront className="h-4 w-4" aria-hidden="true" />
+                My Cars
+              </Link>
+
+              <Link
+                to="/dealer/cars/add"
+                className={roleLinkClass(
+                  location.pathname === "/dealer/cars/add",
+                )}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add Car
+              </Link>
+            </>
           )}
 
+          {/* Admin Navigation */}
           {isAdmin && (
             <Link
               to="/admin"
-              className={roleLinkClass(location.pathname.startsWith("/admin"))}
+              className={roleLinkClass(isSectionActive("/admin"))}
             >
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
               Admin
@@ -175,7 +203,7 @@ const Navbar = () => {
 
           {!loading && user ? (
             <>
-              {/* Favorites */}
+              {/* Saved Cars */}
               <Link
                 to="/saved-cars"
                 className={`flex h-10 w-10 items-center justify-center rounded-full border border-border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
@@ -230,7 +258,6 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              {/* Login */}
               <Link
                 to="/login"
                 className="rounded-full px-5 py-2.5 font-garamond text-base text-foreground/80 transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -238,7 +265,6 @@ const Navbar = () => {
                 Login
               </Link>
 
-              {/* Register */}
               <Link
                 to="/register"
                 className="rounded-full bg-primary px-6 py-2.5 font-garamond text-base font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -249,9 +275,8 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Buttons */}
+        {/* Mobile Controls */}
         <div className="flex items-center gap-2 md:hidden">
-          {/* Mobile Theme Toggle */}
           <button
             type="button"
             onClick={toggleTheme}
@@ -268,7 +293,6 @@ const Navbar = () => {
             )}
           </button>
 
-          {/* Mobile Menu */}
           <button
             type="button"
             onClick={() => setMobileOpen((prev) => !prev)}
@@ -314,7 +338,7 @@ const Navbar = () => {
                 </Link>
               ))}
 
-              {/* Mobile Favorites */}
+              {/* Saved Cars */}
               {!loading && user && (
                 <Link
                   to="/saved-cars"
@@ -330,13 +354,14 @@ const Navbar = () => {
                 </Link>
               )}
 
+              {/* Dealer */}
               {isDealer && (
                 <>
                   <Link
                     to="/dealer/cars"
                     onClick={closeMobile}
                     className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                      location.pathname.startsWith("/dealer")
+                      isSectionActive("/dealer")
                         ? "bg-primary/10 text-primary"
                         : "text-foreground hover:bg-muted"
                     }`}
@@ -348,7 +373,11 @@ const Navbar = () => {
                   <Link
                     to="/dealer/cars/add"
                     onClick={closeMobile}
-                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 font-garamond text-lg font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                      location.pathname === "/dealer/cars/add"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-primary text-primary-foreground hover:opacity-90"
+                    }`}
                   >
                     <Plus className="h-4 w-4" aria-hidden="true" />
                     Add New Car
@@ -356,12 +385,13 @@ const Navbar = () => {
                 </>
               )}
 
+              {/* Admin */}
               {isAdmin && (
                 <Link
                   to="/admin"
                   onClick={closeMobile}
                   className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    location.pathname.startsWith("/admin")
+                    isSectionActive("/admin")
                       ? "bg-primary/10 text-primary"
                       : "text-foreground hover:bg-muted"
                   }`}
@@ -372,6 +402,7 @@ const Navbar = () => {
               )}
             </nav>
 
+            {/* Mobile User Area */}
             <div className="mt-5 border-t border-border pt-5">
               {!loading && user ? (
                 <div className="space-y-3">

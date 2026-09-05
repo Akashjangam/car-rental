@@ -31,18 +31,19 @@ const createDealerCar = async (req, res) => {
       });
     }
 
-    // Image path
-    const image = req.file ? `/uploads/${req.file.filename}` : "";
+    // Cloudinary image URL
+    const image = req.file ? req.file.path : "";
 
     // Create car
     const car = await Car.create({
-      brand,
-      model,
+      brand: brand.trim(),
+      model: model.trim(),
       year: Number(year),
       pricePerDay: Number(pricePerDay),
       fuelType,
       transmission,
       seats: Number(seats),
+
       available:
         available === undefined
           ? true
@@ -119,7 +120,6 @@ const getDealerCarById = async (req, res) => {
   } catch (error) {
     console.error("Get dealer car error:", error);
 
-    // Invalid MongoDB ID
     if (error.name === "CastError") {
       return res.status(400).json({
         success: false,
@@ -164,33 +164,38 @@ const updateDealerCar = async (req, res) => {
     }
 
     // Update fields only when provided
-    if (brand !== undefined) car.brand = brand;
-    if (model !== undefined) car.model = model;
-    if (year !== undefined) car.year = Number(year);
-    if (pricePerDay !== undefined) {
+    if (brand !== undefined) car.brand = brand.trim();
+    if (model !== undefined) car.model = model.trim();
+    if (year !== undefined && year !== "") {
+      car.year = Number(year);
+    }
+
+    if (pricePerDay !== undefined && pricePerDay !== "") {
       car.pricePerDay = Number(pricePerDay);
     }
-    if (fuelType !== undefined) car.fuelType = fuelType;
+
+    if (fuelType !== undefined) {
+      car.fuelType = fuelType;
+    }
+
     if (transmission !== undefined) {
       car.transmission = transmission;
     }
-    if (seats !== undefined) car.seats = Number(seats);
+
+    if (seats !== undefined && seats !== "") {
+      car.seats = Number(seats);
+    }
 
     if (available !== undefined) {
       car.available = available === "true" || available === true;
     }
 
-    // Update image if a new image was uploaded
+    // Update image with Cloudinary URL
     if (req.file) {
-      car.image = `/uploads/${req.file.filename}`;
+      car.image = req.file.path;
     }
 
-    /*
-      IMPORTANT:
-      Do NOT update car.dealer here.
-
-      The dealer ownership must remain unchanged.
-    */
+    // Do NOT change dealer ownership
 
     await car.save();
 

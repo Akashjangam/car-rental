@@ -2,7 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
-@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&family=Metal&display=swap");
+@import "@fontsource/metal";
+@import "@fontsource/eb-garamond";
 
 @custom-variant dark (&:is(.dark *));
 

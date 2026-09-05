@@ -84,7 +84,7 @@ function Login() {
             </p>
           </div>
 
-          {/* Form */}
+          {/* Form Card */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               {/* Email */}
@@ -107,18 +107,26 @@ function Login() {
                   autoComplete="email"
                   disabled={loading}
                   className="h-12 rounded-xl border-border bg-background font-garamond text-base"
-                  aria-invalid={Boolean(error)}
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label
-                  htmlFor="password"
-                  className="mb-2 block font-garamond text-base font-semibold text-foreground"
-                >
-                  Password
-                </label>
+                <div className="mb-2 flex items-center justify-between gap-4">
+                  <label
+                    htmlFor="password"
+                    className="font-garamond text-base font-semibold text-foreground"
+                  >
+                    Password
+                  </label>
+
+                  <Link
+                    to="/forgot-password"
+                    className="font-garamond text-sm font-semibold text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
 
                 <Input
                   id="password"
