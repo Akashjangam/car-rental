@@ -1,9 +1,13 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 465,
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: Number(process.env.SMTP_PORT) || 587,
   secure: process.env.SMTP_SECURE === "true",
+
+  // Force IPv4
+  family: 4,
+
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -23,6 +27,7 @@ const sendPasswordResetEmail = async (email, resetUrl) => {
     from: `"DriveNow" <${process.env.SMTP_USER}>`,
     to: email,
     subject: "DriveNow - Reset Your Password",
+
     text: `You requested a password reset for your DriveNow account.
 
 Click the link below to reset your password:
@@ -32,12 +37,18 @@ ${resetUrl}
 This link will expire in 15 minutes.
 
 If you did not request a password reset, you can safely ignore this email.`,
+
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; background: #f8fafc;">
         <div style="background: #ffffff; padding: 30px; border-radius: 12px;">
-          <h1 style="margin: 0 0 20px;">DriveNow</h1>
 
-          <h2>Password Reset</h2>
+          <h1 style="margin: 0 0 20px;">
+            DriveNow
+          </h1>
+
+          <h2>
+            Password Reset
+          </h2>
 
           <p>
             You requested to reset the password for your DriveNow account.
@@ -65,17 +76,19 @@ If you did not request a password reset, you can safely ignore this email.`,
           </p>
 
           <p>
-            This password reset link will expire in <strong>15 minutes</strong>.
+            This password reset link will expire in
+            <strong>15 minutes</strong>.
           </p>
 
           <p>
-            If you did not request this password reset, you can safely ignore
-            this email.
+            If you did not request this password reset,
+            you can safely ignore this email.
           </p>
 
           <p style="margin-top: 30px; color: #64748b;">
             DriveNow Car Rental
           </p>
+
         </div>
       </div>
     `,
