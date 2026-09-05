@@ -16,7 +16,9 @@ import {
 import { getCars } from "../../services/carApi";
 import { getCarReviews } from "../../services/reviewApi";
 
-const API_ORIGIN = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_ORIGIN = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 function Cars() {
   const [searchParams] = useSearchParams();
@@ -27,6 +29,9 @@ function Cars() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // ============================================================
+  // FETCH CARS + REVIEWS
+  // ============================================================
   useEffect(() => {
     let mounted = true;
 
@@ -46,19 +51,15 @@ function Cars() {
 
         const carData = Array.isArray(data) ? data : [];
 
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
         setCars(carData);
 
-        /*
-         * Fetch review summary for every car.
-         * The review API returns:
-         * {
-         *   reviews: [],
-         *   totalReviews: number,
-         *   averageRating: number
-         * }
-         */
+        // ========================================================
+        // FETCH REVIEW SUMMARY FOR EVERY CAR
+        // ========================================================
         const reviewResults = await Promise.all(
           carData.map(async (car) => {
             const carId = car?._id || car?.id;
@@ -90,7 +91,9 @@ function Cars() {
           }),
         );
 
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
         const reviewMap = {};
 
@@ -127,10 +130,16 @@ function Cars() {
     };
   }, []);
 
+  // ============================================================
+  // SYNC SEARCH WITH URL
+  // ============================================================
   useEffect(() => {
     setSearch(searchParams.get("search") || "");
   }, [searchParams]);
 
+  // ============================================================
+  // FILTER CARS
+  // ============================================================
   const filteredCars = useMemo(() => {
     const value = search.trim().toLowerCase();
 
@@ -155,13 +164,18 @@ function Cars() {
     });
   }, [cars, search]);
 
+  // ============================================================
+  // CLEAR SEARCH
+  // ============================================================
   const clearSearch = () => {
     setSearch("");
   };
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
+      {/* ======================================================
+          HEADER
+      ======================================================= */}
       <section className="border-b border-border">
         <div className="mx-auto max-w-[1400px] px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
           <div className="max-w-4xl">
@@ -185,7 +199,9 @@ function Cars() {
             </p>
           </div>
 
-          {/* Search */}
+          {/* ==================================================
+              SEARCH
+          =================================================== */}
           <div className="mt-10 max-w-3xl">
             <label
               htmlFor="car-search"
@@ -225,7 +241,9 @@ function Cars() {
         </div>
       </section>
 
-      {/* Cars */}
+      {/* ======================================================
+          CARS
+      ======================================================= */}
       <section className="mx-auto max-w-[1400px] px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
         {!loading && !error && (
           <div className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-5">
@@ -242,7 +260,9 @@ function Cars() {
           </div>
         )}
 
-        {/* Loading */}
+        {/* ======================================================
+            LOADING
+        ======================================================= */}
         {loading && (
           <div
             className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3"
@@ -255,7 +275,9 @@ function Cars() {
           </div>
         )}
 
-        {/* Error */}
+        {/* ======================================================
+            ERROR
+        ======================================================= */}
         {!loading && error && (
           <div className="flex min-h-[350px] items-center justify-center">
             <div
@@ -292,7 +314,9 @@ function Cars() {
           </div>
         )}
 
-        {/* Empty */}
+        {/* ======================================================
+            EMPTY
+        ======================================================= */}
         {!loading && !error && filteredCars.length === 0 && (
           <div className="flex min-h-[350px] items-center justify-center">
             <div className="w-full max-w-xl border-y border-border px-6 py-12 text-center">
@@ -323,7 +347,9 @@ function Cars() {
           </div>
         )}
 
-        {/* Car Grid */}
+        {/* ======================================================
+            CAR GRID
+        ======================================================= */}
         {!loading && !error && filteredCars.length > 0 && (
           <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3">
             {filteredCars.map((car) => {
@@ -349,6 +375,9 @@ function Cars() {
   );
 }
 
+// ================================================================
+// CAR CARD
+// ================================================================
 function CarCard({ car, reviewData }) {
   const carId = car?._id || car?.id;
 
@@ -385,8 +414,13 @@ function CarCard({ car, reviewData }) {
 
   const totalReviews = Number(reviewData?.totalReviews) || 0;
 
+  // ============================================================
+  // LOAD SAVED STATE
+  // ============================================================
   useEffect(() => {
-    if (!carId) return;
+    if (!carId) {
+      return;
+    }
 
     try {
       const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
@@ -402,8 +436,13 @@ function CarCard({ car, reviewData }) {
     }
   }, [carId]);
 
+  // ============================================================
+  // TOGGLE SAVED CAR
+  // ============================================================
   const toggleSavedCar = () => {
-    if (!carId) return;
+    if (!carId) {
+      return;
+    }
 
     try {
       const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
@@ -432,7 +471,9 @@ function CarCard({ car, reviewData }) {
 
   return (
     <article className="group overflow-hidden rounded-[28px] border border-border bg-card transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-      {/* Image */}
+      {/* ======================================================
+          IMAGE
+      ======================================================= */}
       <div className="relative aspect-[16/10] overflow-hidden bg-muted">
         {imageUrl ? (
           <img
@@ -440,6 +481,9 @@ function CarCard({ car, reviewData }) {
             alt={carName}
             loading="lazy"
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
           />
         ) : (
           <div
@@ -453,7 +497,9 @@ function CarCard({ car, reviewData }) {
           </div>
         )}
 
-        {/* Availability */}
+        {/* ====================================================
+            AVAILABILITY
+        ===================================================== */}
         <div className="absolute left-4 top-4">
           <span
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 font-garamond text-sm font-semibold shadow-sm ${
@@ -464,7 +510,7 @@ function CarCard({ car, reviewData }) {
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                isAvailable ? "bg-green-600" : "bg-muted-foreground"
+                isAvailable ? "bg-success" : "bg-muted-foreground"
               }`}
               aria-hidden="true"
             />
@@ -473,7 +519,9 @@ function CarCard({ car, reviewData }) {
           </span>
         </div>
 
-        {/* Favorite */}
+        {/* ====================================================
+            FAVORITE
+        ===================================================== */}
         <button
           type="button"
           onClick={toggleSavedCar}
@@ -497,7 +545,9 @@ function CarCard({ car, reviewData }) {
         </button>
       </div>
 
-      {/* Content */}
+      {/* ======================================================
+          CONTENT
+      ======================================================= */}
       <div className="p-6">
         <div className="flex items-start justify-between gap-5">
           <div className="min-w-0">
@@ -523,7 +573,9 @@ function CarCard({ car, reviewData }) {
           </div>
         </div>
 
-        {/* Reviews */}
+        {/* ====================================================
+            REVIEWS
+        ===================================================== */}
         <div className="mt-4 flex items-center gap-2">
           <div className="flex items-center gap-1">
             <Star
@@ -546,7 +598,9 @@ function CarCard({ car, reviewData }) {
           </span>
         </div>
 
-        {/* Specifications */}
+        {/* ====================================================
+            SPECIFICATIONS
+        ===================================================== */}
         <div className="mt-5 grid grid-cols-3 divide-x divide-border border-y border-border py-4">
           <SpecItem icon={<Gauge className="h-4 w-4" />} label={transmission} />
 
@@ -558,7 +612,9 @@ function CarCard({ car, reviewData }) {
           />
         </div>
 
-        {/* Action */}
+        {/* ====================================================
+            ACTION
+        ===================================================== */}
         {carId ? (
           <Link
             to={`/cars/${carId}`}
@@ -577,6 +633,9 @@ function CarCard({ car, reviewData }) {
   );
 }
 
+// ================================================================
+// SPECIFICATION ITEM
+// ================================================================
 function SpecItem({ icon, label }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-1.5 px-2 text-center">
@@ -591,6 +650,9 @@ function SpecItem({ icon, label }) {
   );
 }
 
+// ================================================================
+// CAR SKELETON
+// ================================================================
 function CarSkeleton() {
   return (
     <div
@@ -602,6 +664,7 @@ function CarSkeleton() {
       <div className="space-y-5 p-6">
         <div className="flex justify-between gap-4">
           <div className="h-7 w-36 animate-pulse rounded bg-muted" />
+
           <div className="h-7 w-20 animate-pulse rounded bg-muted" />
         </div>
 
