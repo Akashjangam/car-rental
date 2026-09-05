@@ -18,6 +18,7 @@ const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // User Booking
 const BookingCreate = lazy(() => import("./pages/booking/BookingCreate"));
@@ -86,6 +87,8 @@ function App() {
           <Route path="/register" element={<Register />} />
 
           <Route path="/forgot-password" element={<ForgotPassword />} />
+
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           {/* ==================== USER ==================== */}
 
