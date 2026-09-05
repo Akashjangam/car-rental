@@ -5,7 +5,11 @@ import { ArrowLeft, ArrowRight, Fuel, Gauge, Star, Users } from "lucide-react";
 import { getCars } from "../../services/carApi";
 import { getCarReviews } from "../../services/reviewApi";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import CarHero from "../../assets/CarHero.png";
+
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 function FeaturedCars() {
   const [cars, setCars] = useState([]);
@@ -127,7 +131,6 @@ function FeaturedCars() {
 
   // ============================================================
   // AUTO SLIDE
-  // Moves ONE card at a time
   // ============================================================
   useEffect(() => {
     if (loading || cars.length <= 1 || isHovered) {
@@ -154,7 +157,11 @@ function FeaturedCars() {
   // ============================================================
   const getImageUrl = (image) => {
     if (!image) {
-      return "/placeholder-car.jpg";
+      return CarHero;
+    }
+
+    if (typeof image !== "string") {
+      return CarHero;
     }
 
     if (image.startsWith("http")) {
@@ -165,13 +172,19 @@ function FeaturedCars() {
   };
 
   // ============================================================
+  // IMAGE ERROR HANDLER
+  // ============================================================
+  const handleImageError = (event) => {
+    if (event.currentTarget.dataset.fallback === "true") {
+      return;
+    }
+
+    event.currentTarget.dataset.fallback = "true";
+    event.currentTarget.src = CarHero;
+  };
+
+  // ============================================================
   // VISIBLE CARS
-  //
-  // Desktop: 3 cars
-  // Tablet: 2 cars
-  // Mobile: 1 car
-  //
-  // The index moves ONE car at a time.
   // ============================================================
   const visibleCars = useMemo(() => {
     if (!cars.length) {
@@ -245,7 +258,9 @@ function FeaturedCars() {
             </p>
           </div>
 
-          {/* Header Actions */}
+          {/* ====================================================
+              HEADER ACTIONS
+          ===================================================== */}
           <div className="flex items-center gap-4">
             <Link
               to="/cars"
@@ -361,7 +376,6 @@ function FeaturedCars() {
           >
             {/* ==================================================
                 MOBILE
-                One car
             =================================================== */}
             <div className="sm:hidden">
               {visibleCars.slice(0, 1).map((car) => (
@@ -370,13 +384,13 @@ function FeaturedCars() {
                   car={car}
                   reviews={reviews}
                   getImageUrl={getImageUrl}
+                  handleImageError={handleImageError}
                 />
               ))}
             </div>
 
             {/* ==================================================
                 TABLET
-                Two cars
             =================================================== */}
             <div className="hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
               {visibleCars.slice(0, 2).map((car, index) => (
@@ -385,13 +399,13 @@ function FeaturedCars() {
                   car={car}
                   reviews={reviews}
                   getImageUrl={getImageUrl}
+                  handleImageError={handleImageError}
                 />
               ))}
             </div>
 
             {/* ==================================================
                 DESKTOP
-                Three cars
             =================================================== */}
             <div className="hidden gap-6 lg:grid lg:grid-cols-3">
               {visibleCars.map((car, index) => (
@@ -400,6 +414,7 @@ function FeaturedCars() {
                   car={car}
                   reviews={reviews}
                   getImageUrl={getImageUrl}
+                  handleImageError={handleImageError}
                 />
               ))}
             </div>
@@ -438,7 +453,7 @@ function FeaturedCars() {
 // ================================================================
 // CAR CARD
 // ================================================================
-function CarCard({ car, reviews, getImageUrl }) {
+function CarCard({ car, reviews, getImageUrl, handleImageError }) {
   const carId = car?._id || car?.id;
 
   const reviewData = reviews[String(carId)] || {
@@ -458,12 +473,12 @@ function CarCard({ car, reviews, getImageUrl }) {
           src={getImageUrl(car?.image)}
           alt={carName || "Rental car"}
           className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-[1.03]"
-          onError={(event) => {
-            event.currentTarget.src = "/placeholder-car.jpg";
-          }}
+          onError={handleImageError}
         />
 
-        {/* Available Badge */}
+        {/* ====================================================
+            AVAILABLE BADGE
+        ===================================================== */}
         {car?.available && (
           <span className="absolute left-4 top-4 rounded-full border border-border/50 bg-background/95 px-3 py-1 font-garamond text-xs font-semibold text-primary shadow-sm backdrop-blur-sm">
             Available
@@ -475,7 +490,9 @@ function CarCard({ car, reviews, getImageUrl }) {
           CONTENT
       ======================================================= */}
       <div className="p-5">
-        {/* Name + Price */}
+        {/* ====================================================
+            NAME + PRICE
+        ===================================================== */}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="font-metal text-2xl leading-tight text-card-foreground">
