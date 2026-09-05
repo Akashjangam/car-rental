@@ -18,21 +18,19 @@ const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 
-// ========================================
-// CORS
-// ========================================
+/* =====================================================
+   CORS
+===================================================== */
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://127.0.0.1:5173",
   "https://drivenow-carrental.vercel.app",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without an Origin header
-      // such as server-to-server requests.
+      // Allow requests from Postman, server-to-server, etc.
       if (!origin) {
         return callback(null, true);
       }
@@ -41,33 +39,41 @@ app.use(
         return callback(null, true);
       }
 
+      console.log("CORS blocked:", origin);
+
       return callback(new Error("Not allowed by CORS"));
     },
+
     credentials: true,
+
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
   }),
 );
 
-// ========================================
-// BODY PARSERS
-// ========================================
+/* =====================================================
+   BODY PARSING
+===================================================== */
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* =====================================================
+   STATIC UPLOADS
+===================================================== */
 
 app.use(
-  express.urlencoded({
-    extended: true,
-  }),
+  "/uploads",
+  express.static(path.join(__dirname, "uploads")),
 );
 
-// ========================================
-// STATIC UPLOADS
-// ========================================
-
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// ========================================
-// API ROUTES
-// ========================================
+/* =====================================================
+   API ROUTES
+===================================================== */
 
 app.use("/api/auth", authRoutes);
 
@@ -83,9 +89,9 @@ app.use("/api/payments", paymentRoutes);
 
 app.use("/api/reviews", reviewRoutes);
 
-// ========================================
-// HEALTH CHECK
-// ========================================
+/* =====================================================
+   ROOT / HEALTH CHECK
+===================================================== */
 
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -94,9 +100,9 @@ app.get("/", (req, res) => {
   });
 });
 
-// ========================================
-// ERROR HANDLER
-// ========================================
+/* =====================================================
+   GLOBAL ERROR HANDLER
+===================================================== */
 
 app.use((err, req, res, next) => {
   console.error("========================================");
@@ -107,6 +113,10 @@ app.use((err, req, res, next) => {
   console.error("Message:", err.message);
   console.error("Error:", err);
 
+  console.error("========================================");
+
+  /* ---------- Multer Error ---------- */
+
   if (err instanceof multer.MulterError) {
     return res.status(400).json({
       success: false,
@@ -115,12 +125,16 @@ app.use((err, req, res, next) => {
     });
   }
 
+  /* ---------- CORS Error ---------- */
+
   if (err.message === "Not allowed by CORS") {
     return res.status(403).json({
       success: false,
-      message: "CORS policy blocked this request",
+      message: "CORS policy blocked this request.",
     });
   }
+
+  /* ---------- General Error ---------- */
 
   return res.status(500).json({
     success: false,
@@ -129,9 +143,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ========================================
-// SERVER
-// ========================================
+/* =====================================================
+   SERVER
+===================================================== */
 
 const PORT = process.env.PORT || 5000;
 
@@ -141,9 +155,18 @@ const startServer = async () => {
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
+
+      console.log("Allowed CORS origins:");
+
+      allowedOrigins.forEach((origin) => {
+        console.log(`- ${origin}`);
+      });
     });
   } catch (error) {
-    console.error("Unable to start server:", error.message);
+    console.error(
+      "Unable to start server:",
+      error.message,
+    );
 
     process.exit(1);
   }
