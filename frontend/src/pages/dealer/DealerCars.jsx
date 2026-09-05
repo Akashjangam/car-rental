@@ -181,7 +181,7 @@ const DealerCars = () => {
           </div>
         )}
 
-        {/* Loading */}
+        {/* Loading / Empty / Cars */}
         {loading ? (
           <LoadingState />
         ) : cars.length === 0 ? (
@@ -449,7 +449,7 @@ function StatusBadge({ available }) {
     >
       <span
         className={`h-2 w-2 rounded-full ${
-          available ? "bg-green-600" : "bg-destructive"
+          available ? "bg-success" : "bg-destructive"
         }`}
         aria-hidden="true"
       />

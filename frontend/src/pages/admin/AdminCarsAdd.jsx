@@ -22,12 +22,13 @@ const AdminCarsAdd = () => {
 
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   // =========================================================
-  // CLEAN IMAGE PREVIEW URL
+  // IMAGE PREVIEW CLEANUP
   // =========================================================
 
   useEffect(() => {
@@ -42,11 +43,11 @@ const AdminCarsAdd = () => {
   // HANDLE INPUT
   // =========================================================
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       [name]: type === "checkbox" ? checked : value,
     }));
 
@@ -58,8 +59,8 @@ const AdminCarsAdd = () => {
   // HANDLE IMAGE
   // =========================================================
 
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
 
     setError("");
     setSuccess("");
@@ -70,16 +71,20 @@ const AdminCarsAdd = () => {
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
       setImage(null);
       setPreview("");
-      setError("Please select a valid image file.");
+      event.target.value = "";
+      setError("Only JPG, JPEG, PNG, and WEBP images are allowed.");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       setImage(null);
       setPreview("");
+      event.target.value = "";
       setError("Image size must be less than 5MB.");
       return;
     }
@@ -92,8 +97,8 @@ const AdminCarsAdd = () => {
   // SUBMIT
   // =========================================================
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     setError("");
     setSuccess("");
@@ -177,9 +182,7 @@ const AdminCarsAdd = () => {
   return (
     <main className="min-h-screen bg-background px-4 py-8 font-garamond sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
+        {/* HEADER */}
 
         <header className="mb-8">
           <button
@@ -214,17 +217,16 @@ const AdminCarsAdd = () => {
           </div>
         </header>
 
-        {/* =====================================================
-            FORM
-        ====================================================== */}
+        {/* FORM */}
 
         <section className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-8">
-          {/* Alerts */}
+          {/* ALERTS */}
 
           {error && (
             <div
               className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-4 text-sm font-semibold text-destructive"
               role="alert"
+              aria-live="polite"
             >
               {error}
             </div>
@@ -241,9 +243,7 @@ const AdminCarsAdd = () => {
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* =================================================
-                CAR INFORMATION
-            ================================================== */}
+            {/* CAR INFORMATION */}
 
             <section>
               <div className="border-b border-border pb-5">
@@ -283,7 +283,8 @@ const AdminCarsAdd = () => {
                     placeholder="e.g. Toyota"
                     autoComplete="off"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
@@ -309,7 +310,8 @@ const AdminCarsAdd = () => {
                     placeholder="e.g. Fortuner"
                     autoComplete="off"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
@@ -336,7 +338,8 @@ const AdminCarsAdd = () => {
                     min="1900"
                     max="2100"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
@@ -363,7 +366,8 @@ const AdminCarsAdd = () => {
                     min="0"
                     step="1"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
@@ -386,11 +390,13 @@ const AdminCarsAdd = () => {
                     value={formData.fuelType}
                     onChange={handleChange}
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="">Select fuel type</option>
                     <option value="Petrol">Petrol</option>
                     <option value="Diesel">Diesel</option>
+                    <option value="CNG">CNG</option>
                     <option value="Electric">Electric</option>
                     <option value="Hybrid">Hybrid</option>
                   </select>
@@ -415,7 +421,8 @@ const AdminCarsAdd = () => {
                     value={formData.transmission}
                     onChange={handleChange}
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="">Select transmission</option>
                     <option value="Manual">Manual</option>
@@ -446,15 +453,14 @@ const AdminCarsAdd = () => {
                     min="1"
                     max="20"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
               </div>
             </section>
 
-            {/* =================================================
-                AVAILABILITY
-            ================================================== */}
+            {/* AVAILABILITY */}
 
             <section className="mt-10 border-t border-border pt-8">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -475,6 +481,7 @@ const AdminCarsAdd = () => {
                   name="available"
                   checked={formData.available}
                   onChange={handleChange}
+                  disabled={loading}
                   className="mt-0.5 h-5 w-5 rounded border-input accent-primary focus:ring-2 focus:ring-primary"
                 />
 
@@ -490,9 +497,7 @@ const AdminCarsAdd = () => {
               </label>
             </section>
 
-            {/* =================================================
-                IMAGE
-            ================================================== */}
+            {/* IMAGE */}
 
             <section className="mt-10 border-t border-border pt-8">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -546,15 +551,14 @@ const AdminCarsAdd = () => {
                     type="file"
                     accept="image/png,image/jpeg,image/jpg,image/webp"
                     onChange={handleImageChange}
+                    disabled={loading}
                     className="sr-only"
                   />
                 </label>
               </div>
             </section>
 
-            {/* =================================================
-                ACTIONS
-            ================================================== */}
+            {/* ACTIONS */}
 
             <div className="mt-10 flex flex-col-reverse gap-3 border-t border-border pt-8 sm:flex-row sm:justify-end">
               <button

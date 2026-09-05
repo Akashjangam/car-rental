@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,7 +15,9 @@ import { getBookingById } from "../../services/bookingApi";
 import { createPayment } from "../../services/paymentApi";
 import { useAuth } from "../../context/AuthContext";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_ORIGIN =
+  import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
+  "http://localhost:5000";
 
 function Payment() {
   const { bookingId } = useParams();
@@ -70,13 +72,11 @@ function Payment() {
     loadBooking();
   }, [bookingId, token]);
 
-  const getCar = () => {
+  const car = useMemo(() => {
     if (!booking) return null;
 
     return booking.car || booking.vehicle || booking.carDetails || null;
-  };
-
-  const car = getCar();
+  }, [booking]);
 
   const getStartDate = () =>
     booking?.startDate ||
@@ -92,16 +92,15 @@ function Payment() {
     booking?.bookingEndDate ||
     "";
 
-  const getAmount = () =>
-    Number(
-      booking?.totalAmount ??
-        booking?.totalPrice ??
-        booking?.amount ??
-        booking?.price ??
-        0,
-    );
+  const totalAmount = Number(
+    booking?.totalAmount ??
+      booking?.totalPrice ??
+      booking?.amount ??
+      booking?.price ??
+      0,
+  );
 
-  const getDays = () => {
+  const rentalDays = useMemo(() => {
     const start = getStartDate();
     const end = getEndDate();
 
@@ -114,17 +113,20 @@ function Payment() {
       return 0;
     }
 
-    const difference = endTime - startTime;
+    return Math.max(
+      0,
+      Math.ceil((endTime - startTime) / (1000 * 60 * 60 * 24)),
+    );
+  }, [booking]);
 
-    return Math.max(0, Math.ceil(difference / (1000 * 60 * 60 * 24)));
-  };
+  const isPaid = booking?.paymentStatus === "paid";
 
   const formatPrice = (amount) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(Number(amount) || 0);
 
   const formatDate = (date) => {
     if (!date) return "—";
@@ -149,15 +151,17 @@ function Payment() {
       return image;
     }
 
-    return `${API_BASE_URL}${image.startsWith("/") ? "" : "/"}${image}`;
+    return `${API_ORIGIN}${image.startsWith("/") ? "" : "/"}${image}`;
   };
-
-  const rentalDays = getDays();
-  const totalAmount = getAmount();
 
   const handlePayment = async () => {
     if (!bookingId || !token) {
       setError("Unable to process payment.");
+      return;
+    }
+
+    if (isPaid) {
+      setError("This booking has already been paid.");
       return;
     }
 
@@ -186,13 +190,20 @@ function Payment() {
         response?.data?.paymentId ||
         "";
 
+      const updatedBooking = {
+        ...booking,
+        paymentStatus: "paid",
+        status: "confirmed",
+      };
+
+      setBooking(updatedBooking);
       setSuccess("Payment processed successfully.");
 
       setTimeout(() => {
         navigate("/payment-result", {
           state: {
             success: true,
-            booking,
+            booking: updatedBooking,
             payment,
             paymentId,
             bookingId,
@@ -259,7 +270,6 @@ function Payment() {
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-[1400px] px-5 py-10 sm:px-8 lg:px-10 lg:py-16">
-        {/* HEADER */}
         <div className="mb-10">
           <Link
             to="/my-bookings"
@@ -289,7 +299,6 @@ function Payment() {
           </p>
         </div>
 
-        {/* ALERTS */}
         {error && (
           <div
             role="alert"
@@ -321,7 +330,6 @@ function Payment() {
         )}
 
         <div className="grid gap-8 lg:grid-cols-[1fr_390px] lg:items-start">
-          {/* BOOKING DETAILS */}
           <section className="border-y border-border bg-background">
             <div className="flex items-center gap-4 border-b border-border py-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-primary">
@@ -339,7 +347,6 @@ function Payment() {
               </div>
             </div>
 
-            {/* CAR */}
             <div className="border-b border-border py-7">
               <div className="flex flex-col gap-5 sm:flex-row">
                 <div className="h-48 w-full overflow-hidden bg-muted sm:h-36 sm:w-56 sm:shrink-0">
@@ -374,14 +381,12 @@ function Payment() {
               </div>
             </div>
 
-            {/* DATES */}
             <div className="grid border-b border-border sm:grid-cols-2">
               <DateCard title="Pickup Date" date={formatDate(getStartDate())} />
 
               <DateCard title="Return Date" date={formatDate(getEndDate())} />
             </div>
 
-            {/* DURATION */}
             <div className="flex items-center gap-4 py-6">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-primary">
                 <CalendarDays className="h-5 w-5" aria-hidden="true" />
@@ -401,7 +406,6 @@ function Payment() {
             </div>
           </section>
 
-          {/* PAYMENT SUMMARY */}
           <section className="border border-border bg-card p-6 sm:p-7">
             <div className="flex items-center gap-4 border-b border-border pb-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success text-foreground">
@@ -418,6 +422,25 @@ function Payment() {
                 </p>
               </div>
             </div>
+
+            {isPaid && (
+              <div className="mt-6 flex items-start gap-3 border border-success bg-success p-4">
+                <CheckCircle2
+                  className="mt-0.5 h-5 w-5 shrink-0 text-foreground"
+                  aria-hidden="true"
+                />
+
+                <div>
+                  <p className="font-garamond text-base font-semibold text-foreground">
+                    Payment Completed
+                  </p>
+
+                  <p className="mt-1 font-garamond text-sm text-muted-foreground">
+                    This booking has already been paid.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4 py-6">
               <div className="flex items-center justify-between font-garamond text-base">
@@ -449,7 +472,6 @@ function Payment() {
               </div>
             </div>
 
-            {/* SECURITY */}
             <div className="flex items-start gap-3 border border-secondary bg-secondary/20 p-4">
               <Lock
                 className="mt-0.5 h-[18px] w-[18px] shrink-0 text-foreground"
@@ -467,28 +489,37 @@ function Payment() {
               </div>
             </div>
 
-            {/* PAY */}
-            <button
-              type="button"
-              onClick={handlePayment}
-              disabled={paymentLoading || totalAmount <= 0}
-              className="mt-6 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-garamond text-lg font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {paymentLoading ? (
-                <>
-                  <Loader2
-                    className="h-5 w-5 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Processing Payment...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="h-5 w-5" aria-hidden="true" />
-                  Pay {formatPrice(totalAmount)}
-                </>
-              )}
-            </button>
+            {isPaid ? (
+              <Link
+                to="/my-bookings"
+                className="mt-6 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full border border-border bg-muted px-5 font-garamond text-lg font-semibold text-foreground transition hover:bg-background focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+              >
+                <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                View My Bookings
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePayment}
+                disabled={paymentLoading || totalAmount <= 0}
+                className="mt-6 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-garamond text-lg font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {paymentLoading ? (
+                  <>
+                    <Loader2
+                      className="h-5 w-5 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-5 w-5" aria-hidden="true" />
+                    Pay {formatPrice(totalAmount)}
+                  </>
+                )}
+              </button>
+            )}
 
             <p className="mt-4 text-center font-garamond text-sm text-muted-foreground">
               By continuing, you agree to the DriveNow rental terms.

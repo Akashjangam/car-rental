@@ -6,12 +6,15 @@ import {
   ChevronRight,
   Fuel,
   Gauge,
+  Heart,
   Search,
+  Star,
   Users,
   X,
 } from "lucide-react";
 
 import { getCars } from "../../services/carApi";
+import { getCarReviews } from "../../services/reviewApi";
 
 const API_ORIGIN = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -19,6 +22,7 @@ function Cars() {
   const [searchParams] = useSearchParams();
 
   const [cars, setCars] = useState([]);
+  const [reviews, setReviews] = useState({});
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,17 +30,80 @@ function Cars() {
   useEffect(() => {
     let mounted = true;
 
-    const fetchCars = async () => {
+    const fetchCarsAndReviews = async () => {
       try {
         setLoading(true);
         setError("");
 
         const response = await getCars();
-        const data = response?.cars || response?.data || response || [];
 
-        if (mounted) {
-          setCars(Array.isArray(data) ? data : []);
-        }
+        const data =
+          response?.cars ||
+          response?.data?.cars ||
+          response?.data ||
+          response ||
+          [];
+
+        const carData = Array.isArray(data) ? data : [];
+
+        if (!mounted) return;
+
+        setCars(carData);
+
+        /*
+         * Fetch review summary for every car.
+         * The review API returns:
+         * {
+         *   reviews: [],
+         *   totalReviews: number,
+         *   averageRating: number
+         * }
+         */
+        const reviewResults = await Promise.all(
+          carData.map(async (car) => {
+            const carId = car?._id || car?.id;
+
+            if (!carId) {
+              return null;
+            }
+
+            try {
+              const reviewResponse = await getCarReviews(carId);
+
+              return {
+                carId: String(carId),
+                totalReviews: Number(reviewResponse?.totalReviews) || 0,
+                averageRating: Number(reviewResponse?.averageRating) || 0,
+              };
+            } catch (reviewError) {
+              console.error(
+                `Failed to load reviews for car ${carId}:`,
+                reviewError,
+              );
+
+              return {
+                carId: String(carId),
+                totalReviews: 0,
+                averageRating: 0,
+              };
+            }
+          }),
+        );
+
+        if (!mounted) return;
+
+        const reviewMap = {};
+
+        reviewResults.forEach((result) => {
+          if (result?.carId) {
+            reviewMap[result.carId] = {
+              totalReviews: result.totalReviews,
+              averageRating: result.averageRating,
+            };
+          }
+        });
+
+        setReviews(reviewMap);
       } catch (err) {
         console.error("Failed to fetch cars:", err);
 
@@ -53,7 +120,7 @@ function Cars() {
       }
     };
 
-    fetchCars();
+    fetchCarsAndReviews();
 
     return () => {
       mounted = false;
@@ -259,9 +326,22 @@ function Cars() {
         {/* Car Grid */}
         {!loading && !error && filteredCars.length > 0 && (
           <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredCars.map((car) => (
-              <CarCard key={car?._id || car?.id} car={car} />
-            ))}
+            {filteredCars.map((car) => {
+              const carId = car?._id || car?.id;
+
+              return (
+                <CarCard
+                  key={carId}
+                  car={car}
+                  reviewData={
+                    reviews[String(carId)] || {
+                      totalReviews: 0,
+                      averageRating: 0,
+                    }
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </section>
@@ -269,8 +349,10 @@ function Cars() {
   );
 }
 
-function CarCard({ car }) {
+function CarCard({ car, reviewData }) {
   const carId = car?._id || car?.id;
+
+  const [isSaved, setIsSaved] = useState(false);
 
   const image = car?.image || car?.imageUrl || car?.images?.[0] || "";
 
@@ -298,6 +380,55 @@ function CarCard({ car }) {
     car?.available !== false &&
     car?.isAvailable !== false &&
     car?.availability !== false;
+
+  const averageRating = Number(reviewData?.averageRating) || 0;
+
+  const totalReviews = Number(reviewData?.totalReviews) || 0;
+
+  useEffect(() => {
+    if (!carId) return;
+
+    try {
+      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
+
+      const alreadySaved = savedCars.some(
+        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
+      );
+
+      setIsSaved(alreadySaved);
+    } catch (error) {
+      console.error("Failed to check saved car:", error);
+      setIsSaved(false);
+    }
+  }, [carId]);
+
+  const toggleSavedCar = () => {
+    if (!carId) return;
+
+    try {
+      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
+
+      const alreadySaved = savedCars.some(
+        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
+      );
+
+      let updatedCars;
+
+      if (alreadySaved) {
+        updatedCars = savedCars.filter(
+          (savedCar) => String(savedCar?._id || savedCar?.id) !== String(carId),
+        );
+      } else {
+        updatedCars = [...savedCars, car];
+      }
+
+      localStorage.setItem("savedCars", JSON.stringify(updatedCars));
+
+      setIsSaved(!alreadySaved);
+    } catch (error) {
+      console.error("Failed to save car:", error);
+    }
+  };
 
   return (
     <article className="group overflow-hidden rounded-[28px] border border-border bg-card transition duration-300 hover:-translate-y-1 hover:shadow-xl">
@@ -341,6 +472,29 @@ function CarCard({ car }) {
             {isAvailable ? "Available" : "Unavailable"}
           </span>
         </div>
+
+        {/* Favorite */}
+        <button
+          type="button"
+          onClick={toggleSavedCar}
+          className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 ${
+            isSaved
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-background/90 text-foreground hover:border-primary hover:text-primary"
+          }`}
+          aria-label={
+            isSaved ? `Remove ${carName} from saved cars` : `Save ${carName}`
+          }
+          aria-pressed={isSaved}
+          title={isSaved ? "Remove from saved cars" : "Save car"}
+        >
+          <Heart
+            className="h-[19px] w-[19px]"
+            fill={isSaved ? "currentColor" : "none"}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+        </button>
       </div>
 
       {/* Content */}
@@ -369,8 +523,31 @@ function CarCard({ car }) {
           </div>
         </div>
 
+        {/* Reviews */}
+        <div className="mt-4 flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Star
+              className="h-4 w-4 text-primary"
+              fill="currentColor"
+              aria-hidden="true"
+            />
+
+            <span className="font-garamond text-sm font-bold text-foreground">
+              {averageRating > 0 ? averageRating.toFixed(1) : "No rating"}
+            </span>
+          </div>
+
+          <span className="text-muted-foreground" aria-hidden="true">
+            ·
+          </span>
+
+          <span className="font-garamond text-sm text-muted-foreground">
+            {totalReviews} {totalReviews === 1 ? "review" : "reviews"}
+          </span>
+        </div>
+
         {/* Specifications */}
-        <div className="mt-6 grid grid-cols-3 divide-x divide-border border-y border-border py-4">
+        <div className="mt-5 grid grid-cols-3 divide-x divide-border border-y border-border py-4">
           <SpecItem icon={<Gauge className="h-4 w-4" />} label={transmission} />
 
           <SpecItem icon={<Fuel className="h-4 w-4" />} label={fuel} />
@@ -427,6 +604,8 @@ function CarSkeleton() {
           <div className="h-7 w-36 animate-pulse rounded bg-muted" />
           <div className="h-7 w-20 animate-pulse rounded bg-muted" />
         </div>
+
+        <div className="h-5 w-32 animate-pulse rounded bg-muted" />
 
         <div className="h-16 animate-pulse rounded bg-muted" />
 

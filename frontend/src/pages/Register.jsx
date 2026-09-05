@@ -22,16 +22,27 @@ function Register() {
 
     setError("");
 
+    // Name validation
     if (!name.trim()) {
       setError("Name is required.");
       return;
     }
 
+    // Email required validation
     if (!email.trim()) {
       setError("Email is required.");
       return;
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Password validation
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -42,7 +53,7 @@ function Register() {
 
       const data = await register({
         name: name.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
 
@@ -142,7 +153,15 @@ function Register() {
                   autoComplete="email"
                   disabled={loading}
                   className="h-12 rounded-xl border-border bg-background font-garamond text-base"
+                  aria-describedby="email-hint"
                 />
+
+                <p
+                  id="email-hint"
+                  className="mt-2 font-garamond text-sm text-muted-foreground"
+                >
+                  Use a valid email address such as Gmail, Outlook, or Yahoo.
+                </p>
               </div>
 
               {/* Password */}

@@ -13,6 +13,7 @@ const dealerRoutes = require("./routes/dealerRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 
@@ -43,6 +44,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/bookings", bookingRoutes);
 
 app.use("/api/payments", paymentRoutes);
+
+app.use("/api/reviews", reviewRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({

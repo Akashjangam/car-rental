@@ -32,6 +32,7 @@ function AdminCarsEdit() {
   const { token } = useAuth();
 
   const [formData, setFormData] = useState(initialForm);
+
   const [existingImage, setExistingImage] = useState("");
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -116,11 +117,11 @@ function AdminCarsEdit() {
   // HANDLE INPUT
   // =========================================================
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       [name]: type === "checkbox" ? checked : value,
     }));
 
@@ -132,8 +133,8 @@ function AdminCarsEdit() {
   // HANDLE IMAGE
   // =========================================================
 
-  const handleImageChange = (e) => {
-    const selectedFile = e.target.files?.[0];
+  const handleImageChange = (event) => {
+    const selectedFile = event.target.files?.[0];
 
     if (!selectedFile) {
       return;
@@ -143,13 +144,15 @@ function AdminCarsEdit() {
 
     if (!allowedTypes.includes(selectedFile.type)) {
       setError("Only JPG, JPEG, PNG and WEBP images are allowed.");
-      e.target.value = "";
+      setImage(null);
+      event.target.value = "";
       return;
     }
 
     if (selectedFile.size > 5 * 1024 * 1024) {
       setError("Image size must be less than 5 MB.");
-      e.target.value = "";
+      setImage(null);
+      event.target.value = "";
       return;
     }
 
@@ -167,7 +170,7 @@ function AdminCarsEdit() {
       return "";
     }
 
-    if (imagePath.startsWith("http")) {
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
       return imagePath;
     }
 
@@ -178,8 +181,8 @@ function AdminCarsEdit() {
   // SUBMIT
   // =========================================================
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     setError("");
     setSuccess("");
@@ -206,6 +209,16 @@ function AdminCarsEdit() {
 
     if (!formData.pricePerDay) {
       setError("Price per day is required.");
+      return;
+    }
+
+    if (!formData.fuelType) {
+      setError("Fuel type is required.");
+      return;
+    }
+
+    if (!formData.transmission) {
+      setError("Transmission is required.");
       return;
     }
 
@@ -251,6 +264,7 @@ function AdminCarsEdit() {
 
       // Dealer is intentionally not sent.
       // Backend preserves the existing dealer.
+
       if (image) {
         data.append("image", image);
       }
@@ -305,9 +319,7 @@ function AdminCarsEdit() {
   return (
     <main className="min-h-screen bg-background px-4 py-8 font-garamond sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
+        {/* HEADER */}
 
         <header className="mb-8">
           <Link
@@ -341,13 +353,12 @@ function AdminCarsEdit() {
           </div>
         </header>
 
-        {/* =====================================================
-            ALERTS
-        ====================================================== */}
+        {/* ALERTS */}
 
         {error && (
           <div
             role="alert"
+            aria-live="polite"
             className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-4 text-sm font-semibold text-destructive"
           >
             {error}
@@ -366,11 +377,11 @@ function AdminCarsEdit() {
           </div>
         )}
 
+        {/* FORM */}
+
         <form onSubmit={handleSubmit}>
           <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-            {/* =================================================
-                BASIC DETAILS
-            ================================================== */}
+            {/* BASIC DETAILS */}
 
             <section className="border-b border-border p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -407,7 +418,8 @@ function AdminCarsEdit() {
                     onChange={handleChange}
                     placeholder="e.g. Toyota"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
@@ -432,7 +444,8 @@ function AdminCarsEdit() {
                     onChange={handleChange}
                     placeholder="e.g. Camry"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
@@ -459,7 +472,8 @@ function AdminCarsEdit() {
                     onChange={handleChange}
                     placeholder="e.g. 2024"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 
@@ -486,15 +500,14 @@ function AdminCarsEdit() {
                     onChange={handleChange}
                     placeholder="e.g. 2500"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
               </div>
             </section>
 
-            {/* =================================================
-                SPECIFICATIONS
-            ================================================== */}
+            {/* SPECIFICATIONS */}
 
             <section className="border-b border-border p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -521,10 +534,12 @@ function AdminCarsEdit() {
                     name="fuelType"
                     value={formData.fuelType}
                     onChange={handleChange}
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="Petrol">Petrol</option>
                     <option value="Diesel">Diesel</option>
+                    <option value="CNG">CNG</option>
                     <option value="Electric">Electric</option>
                     <option value="Hybrid">Hybrid</option>
                   </select>
@@ -545,7 +560,8 @@ function AdminCarsEdit() {
                     name="transmission"
                     value={formData.transmission}
                     onChange={handleChange}
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="Manual">Manual</option>
                     <option value="Automatic">Automatic</option>
@@ -575,15 +591,14 @@ function AdminCarsEdit() {
                     onChange={handleChange}
                     placeholder="e.g. 5"
                     required
-                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
               </div>
             </section>
 
-            {/* =================================================
-                AVAILABILITY
-            ================================================== */}
+            {/* AVAILABILITY */}
 
             <section className="border-b border-border p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -600,6 +615,7 @@ function AdminCarsEdit() {
                   name="available"
                   checked={formData.available}
                   onChange={handleChange}
+                  disabled={saving}
                   className="mt-0.5 h-5 w-5 rounded border-input accent-primary focus:ring-2 focus:ring-primary"
                 />
 
@@ -615,9 +631,7 @@ function AdminCarsEdit() {
               </label>
             </section>
 
-            {/* =================================================
-                IMAGE
-            ================================================== */}
+            {/* IMAGE */}
 
             <section className="border-b border-border p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">
@@ -633,7 +647,7 @@ function AdminCarsEdit() {
               </p>
 
               <div className="mt-6 grid gap-6 md:grid-cols-[260px_1fr]">
-                {/* IMAGE PREVIEW */}
+                {/* CURRENT IMAGE */}
 
                 <div className="overflow-hidden rounded-2xl border border-border bg-muted">
                   {imagePreview ? (
@@ -685,6 +699,7 @@ function AdminCarsEdit() {
                       type="file"
                       accept="image/jpeg,image/jpg,image/png,image/webp"
                       onChange={handleImageChange}
+                      disabled={saving}
                       className="sr-only"
                     />
                   </label>
@@ -698,9 +713,7 @@ function AdminCarsEdit() {
               </div>
             </section>
 
-            {/* =================================================
-                ACTIONS
-            ================================================== */}
+            {/* ACTIONS */}
 
             <div className="flex flex-col-reverse gap-3 bg-muted/30 p-5 sm:flex-row sm:justify-end sm:p-7">
               <Link

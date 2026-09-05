@@ -4,14 +4,16 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 
+// Authentication
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+
 // Public Pages
 import Home from "./pages/Home";
 import Cars from "./pages/cars/Cars";
 import CarDetails from "./pages/cars/CarDetails";
+import SavedCars from "./pages/cars/SavedCars";
 import About from "./pages/About";
 import HowItWorks from "./pages/HowItWorks";
-
-// Authentication
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
@@ -43,50 +45,52 @@ function App() {
     <BrowserRouter>
       <Navbar />
 
-      <main>
-        <Routes>
-          {/* ==================== PUBLIC ==================== */}
+      <Routes>
+        {/* ==================== PUBLIC ==================== */}
 
-          <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
 
-          <Route path="/cars" element={<Cars />} />
+        <Route path="/cars" element={<Cars />} />
 
-          <Route path="/cars/:id" element={<CarDetails />} />
+        <Route path="/cars/:id" element={<CarDetails />} />
 
-          <Route path="/about" element={<About />} />
+        <Route path="/about" element={<About />} />
 
-          <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
 
-          {/* ==================== AUTH ==================== */}
+        <Route path="/login" element={<Login />} />
 
-          <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-          <Route path="/register" element={<Register />} />
+        {/* ==================== USER ==================== */}
 
-          {/* ==================== USER BOOKING ==================== */}
-
+        <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
           <Route path="/booking/:carId" element={<BookingCreate />} />
 
           <Route path="/booking-success" element={<BookingSuccess />} />
 
           <Route path="/my-bookings" element={<MyBookings />} />
 
-          {/* ==================== PAYMENT ==================== */}
-
           <Route path="/payment/:bookingId" element={<Payment />} />
 
           <Route path="/payment-result" element={<PaymentResult />} />
 
-          {/* ==================== DEALER ==================== */}
+          <Route path="/saved-cars" element={<SavedCars />} />
+        </Route>
 
+        {/* ==================== DEALER ==================== */}
+
+        <Route element={<ProtectedRoute allowedRoles={["dealer"]} />}>
           <Route path="/dealer/cars" element={<DealerCars />} />
 
           <Route path="/dealer/cars/add" element={<AddCar />} />
 
           <Route path="/dealer/cars/edit/:id" element={<EditCar />} />
+        </Route>
 
-          {/* ==================== ADMIN ==================== */}
+        {/* ==================== ADMIN ==================== */}
 
+        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/admin" element={<AdminDashboard />} />
 
           <Route path="/admin/cars" element={<AdminCars />} />
@@ -100,23 +104,27 @@ function App() {
           <Route path="/admin/members" element={<AdminMembers />} />
 
           <Route path="/admin/members/add" element={<AdminMemberAdd />} />
+        </Route>
 
-          {/* ==================== 404 ==================== */}
+        {/* ==================== 404 ==================== */}
 
-          <Route
-            path="*"
-            element={
-              <div className="flex min-h-[60vh] items-center justify-center px-4">
-                <div className="text-center">
-                  <h1 className="text-5xl font-bold text-slate-900">404</h1>
+        <Route
+          path="*"
+          element={
+            <div className="flex min-h-[60vh] items-center justify-center px-4">
+              <div className="text-center">
+                <h1 className="font-metal text-5xl font-bold text-foreground">
+                  404
+                </h1>
 
-                  <p className="mt-3 text-slate-500">Page not found</p>
-                </div>
+                <p className="mt-3 font-garamond text-lg text-muted-foreground">
+                  Page not found
+                </p>
               </div>
-            }
-          />
-        </Routes>
-      </main>
+            </div>
+          }
+        />
+      </Routes>
 
       <Footer />
     </BrowserRouter>

@@ -8,8 +8,10 @@ import {
   LayoutDashboard,
   Plus,
   Heart,
+  Sun,
+  Moon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "../../context/AuthContext";
 
@@ -20,9 +22,28 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
 
   const isDealer = user?.role === "dealer";
   const isAdmin = user?.role === "admin";
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    if (darkMode) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [darkMode]);
+
+  const toggleTheme = () => {
+    setDarkMode((prev) => !prev);
+  };
 
   const handleLogout = () => {
     logout();
@@ -41,6 +62,11 @@ const Navbar = () => {
       isActive(path)
         ? "text-primary"
         : "text-foreground/75 hover:text-foreground"
+    }`;
+
+  const roleLinkClass = (isRoleActive) =>
+    `flex items-center gap-1.5 font-garamond text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+      isRoleActive ? "text-primary" : "text-foreground/75 hover:text-foreground"
     }`;
 
   return (
@@ -102,11 +128,7 @@ const Navbar = () => {
           {isDealer && (
             <Link
               to="/dealer/cars"
-              className={`flex items-center gap-1.5 font-garamond text-base transition-colors ${
-                location.pathname.startsWith("/dealer")
-                  ? "text-primary"
-                  : "text-foreground/75 hover:text-foreground"
-              }`}
+              className={roleLinkClass(location.pathname.startsWith("/dealer"))}
             >
               <CarFront className="h-4 w-4" aria-hidden="true" />
               My Cars
@@ -116,11 +138,7 @@ const Navbar = () => {
           {isAdmin && (
             <Link
               to="/admin"
-              className={`flex items-center gap-1.5 font-garamond text-base transition-colors ${
-                location.pathname.startsWith("/admin")
-                  ? "text-primary"
-                  : "text-foreground/75 hover:text-foreground"
-              }`}
+              className={roleLinkClass(location.pathname.startsWith("/admin"))}
             >
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
               Admin
@@ -130,20 +148,52 @@ const Navbar = () => {
 
         {/* Desktop Right */}
         <div className="hidden items-center gap-3 md:flex">
+          {/* Theme Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground/70 transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={
+              darkMode ? "Switch to light mode" : "Switch to dark mode"
+            }
+            title={darkMode ? "Light mode" : "Dark mode"}
+          >
+            {darkMode ? (
+              <Sun
+                className="h-[17px] w-[17px]"
+                strokeWidth={1.7}
+                aria-hidden="true"
+              />
+            ) : (
+              <Moon
+                className="h-[17px] w-[17px]"
+                strokeWidth={1.7}
+                aria-hidden="true"
+              />
+            )}
+          </button>
+
           {!loading && user ? (
             <>
-              <button
-                type="button"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground/70 transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                aria-label="Favorites"
+              {/* Favorites */}
+              <Link
+                to="/saved-cars"
+                className={`flex h-10 w-10 items-center justify-center rounded-full border border-border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  isActive("/saved-cars")
+                    ? "border-primary text-primary"
+                    : "text-foreground/70 hover:border-primary hover:text-primary"
+                }`}
+                aria-label="Saved cars"
+                title="Saved cars"
               >
                 <Heart
                   className="h-[17px] w-[17px]"
                   strokeWidth={1.7}
                   aria-hidden="true"
                 />
-              </button>
+              </Link>
 
+              {/* User */}
               <div className="flex items-center gap-3 border-l border-border pl-4">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <UserRound
@@ -164,6 +214,7 @@ const Navbar = () => {
                 </div>
               </div>
 
+              {/* Logout */}
               <button
                 type="button"
                 onClick={handleLogout}
@@ -179,6 +230,7 @@ const Navbar = () => {
             </>
           ) : (
             <>
+              {/* Login */}
               <Link
                 to="/login"
                 className="rounded-full px-5 py-2.5 font-garamond text-base text-foreground/80 transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -186,6 +238,7 @@ const Navbar = () => {
                 Login
               </Link>
 
+              {/* Register */}
               <Link
                 to="/register"
                 className="rounded-full bg-primary px-6 py-2.5 font-garamond text-base font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -196,21 +249,41 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Button */}
-        <button
-          type="button"
-          onClick={() => setMobileOpen((prev) => !prev)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary md:hidden"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-navigation"
-        >
-          {mobileOpen ? (
-            <X className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          )}
-        </button>
+        {/* Mobile Buttons */}
+        <div className="flex items-center gap-2 md:hidden">
+          {/* Mobile Theme Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={
+              darkMode ? "Switch to light mode" : "Switch to dark mode"
+            }
+            title={darkMode ? "Light mode" : "Dark mode"}
+          >
+            {darkMode ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+
+          {/* Mobile Menu */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen((prev) => !prev)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
+          >
+            {mobileOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Navigation */}
@@ -231,7 +304,7 @@ const Navbar = () => {
                   key={path}
                   to={path}
                   onClick={closeMobile}
-                  className={`block rounded-xl px-4 py-3 font-garamond text-lg transition ${
+                  className={`block rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     isActive(path)
                       ? "bg-primary/10 text-primary"
                       : "text-foreground hover:bg-muted"
@@ -241,12 +314,28 @@ const Navbar = () => {
                 </Link>
               ))}
 
+              {/* Mobile Favorites */}
+              {!loading && user && (
+                <Link
+                  to="/saved-cars"
+                  onClick={closeMobile}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    isActive("/saved-cars")
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Heart className="h-4 w-4" aria-hidden="true" />
+                  Saved Cars
+                </Link>
+              )}
+
               {isDealer && (
                 <>
                   <Link
                     to="/dealer/cars"
                     onClick={closeMobile}
-                    className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition ${
+                    className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                       location.pathname.startsWith("/dealer")
                         ? "bg-primary/10 text-primary"
                         : "text-foreground hover:bg-muted"
@@ -259,7 +348,7 @@ const Navbar = () => {
                   <Link
                     to="/dealer/cars/add"
                     onClick={closeMobile}
-                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 font-garamond text-lg font-semibold text-primary-foreground"
+                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 font-garamond text-lg font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <Plus className="h-4 w-4" aria-hidden="true" />
                     Add New Car
@@ -271,7 +360,7 @@ const Navbar = () => {
                 <Link
                   to="/admin"
                   onClick={closeMobile}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition ${
+                  className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     location.pathname.startsWith("/admin")
                       ? "bg-primary/10 text-primary"
                       : "text-foreground hover:bg-muted"
@@ -305,7 +394,7 @@ const Navbar = () => {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg font-semibold text-destructive transition hover:bg-destructive/5"
+                    className="flex w-full items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg font-semibold text-destructive transition hover:bg-destructive/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <LogOut className="h-4 w-4" aria-hidden="true" />
                     Logout
@@ -316,7 +405,7 @@ const Navbar = () => {
                   <Link
                     to="/login"
                     onClick={closeMobile}
-                    className="rounded-full border border-border px-4 py-3 text-center font-garamond text-lg text-foreground transition hover:border-primary hover:text-primary"
+                    className="rounded-full border border-border px-4 py-3 text-center font-garamond text-lg text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     Login
                   </Link>
@@ -324,7 +413,7 @@ const Navbar = () => {
                   <Link
                     to="/register"
                     onClick={closeMobile}
-                    className="rounded-full bg-primary px-4 py-3 text-center font-garamond text-lg font-semibold text-primary-foreground transition hover:opacity-90"
+                    className="rounded-full bg-primary px-4 py-3 text-center font-garamond text-lg font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     Register
                   </Link>

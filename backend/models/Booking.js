@@ -59,18 +59,14 @@ const bookingSchema = new mongoose.Schema(
   },
 );
 
-// ==========================================
-// VALIDATE BOOKING DATES
-// ==========================================
-
+  // VALIDATE BOOKING DATES
+  
 bookingSchema.pre("validate", function () {
   if (this.startDate && this.endDate && this.endDate <= this.startDate) {
     throw new Error("End date must be after start date");
   }
 });
 
-// ==========================================
-// EXPORT MODEL
-// ==========================================
-
+  // EXPORT MODEL
+  
 module.exports = mongoose.model("Booking", bookingSchema);

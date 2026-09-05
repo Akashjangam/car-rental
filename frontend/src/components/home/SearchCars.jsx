@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, CalendarDays } from "lucide-react";
+import { Search, MapPin, CalendarDays, ArrowRight } from "lucide-react";
 
 function SearchCars() {
   const navigate = useNavigate();
@@ -12,10 +12,15 @@ function SearchCars() {
   const handleSearch = (e) => {
     e.preventDefault();
 
+    // Prevent invalid date range
+    if (startDate && endDate && endDate < startDate) {
+      return;
+    }
+
     const params = new URLSearchParams();
 
     if (location.trim()) {
-      params.set("search", location.trim());
+      params.set("location", location.trim());
     }
 
     if (startDate) {
@@ -26,45 +31,49 @@ function SearchCars() {
       params.set("endDate", endDate);
     }
 
-    navigate(params.toString() ? `/cars?${params.toString()}` : "/cars");
+    navigate(`/cars?${params.toString()}`);
   };
 
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <section className="relative z-10 px-4 py-8 sm:px-6 sm:py-10">
+    <section
+      className="relative z-20 -mt-10 px-4 sm:px-6 lg:px-8"
+      aria-labelledby="search-cars-heading"
+    >
       <div className="mx-auto max-w-6xl">
-        {/* Search Card */}
-        <div className="rounded-2xl border border-border bg-background p-5 shadow-lg sm:p-6 lg:px-7 lg:py-6">
-          {/* Header */}
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-xl sm:p-6">
           <div className="mb-5">
-            <h2 className="font-metal text-2xl leading-none text-foreground sm:text-3xl">
-              Find Your Perfect Car
-            </h2>
-
-            <p className="mt-2 font-garamond text-base text-muted-foreground sm:text-lg">
-              Search for a car and choose your rental dates.
+            <p className="font-garamond text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+              Find your ride
             </p>
+
+            <h2
+              id="search-cars-heading"
+              className="mt-1 font-metal text-2xl font-bold text-card-foreground sm:text-3xl"
+            >
+              Search Cars
+            </h2>
           </div>
 
-          {/* Form */}
           <form
             onSubmit={handleSearch}
-            className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_auto]"
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_auto]"
           >
-            {/* Search */}
-            <div className="min-w-0">
+            {/* Location */}
+            <div>
               <label
                 htmlFor="location"
-                className="mb-1.5 block text-xs font-semibold text-foreground"
+                className="mb-2 block font-garamond text-sm font-semibold text-card-foreground"
               >
-                Search
+                Location
               </label>
 
               <div className="relative">
-                <Search
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                <MapPin
+                  size={19}
                   aria-hidden="true"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
 
                 <input
@@ -72,68 +81,69 @@ function SearchCars() {
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Search brand or model"
-                  className="h-12 w-full rounded-lg border border-border bg-background pl-10 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  placeholder="Enter pickup location"
+                  className="h-12 w-full rounded-xl border border-input bg-background pl-10 pr-4 font-garamond text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
 
-            {/* Pickup Date */}
-            <div className="min-w-0">
+            {/* Start Date */}
+            <div>
               <label
-                htmlFor="startDate"
-                className="mb-1.5 block text-xs font-semibold text-foreground"
+                htmlFor="start-date"
+                className="mb-2 block font-garamond text-sm font-semibold text-card-foreground"
               >
                 Pickup Date
               </label>
 
               <div className="relative">
                 <CalendarDays
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  size={19}
                   aria-hidden="true"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
 
                 <input
-                  id="startDate"
+                  id="start-date"
                   type="date"
                   value={startDate}
+                  min={today}
                   onChange={(e) => {
                     const value = e.target.value;
-
                     setStartDate(value);
 
                     if (endDate && value > endDate) {
                       setEndDate("");
                     }
                   }}
-                  min={today}
-                  className="h-12 w-full rounded-lg border border-border bg-background pl-10 pr-3 text-sm text-foreground outline-none transition hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  className="h-12 w-full rounded-xl border border-input bg-background pl-10 pr-4 font-garamond text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
 
-            {/* Return Date */}
-            <div className="min-w-0">
+            {/* End Date */}
+            <div>
               <label
-                htmlFor="endDate"
-                className="mb-1.5 block text-xs font-semibold text-foreground"
+                htmlFor="end-date"
+                className="mb-2 block font-garamond text-sm font-semibold text-card-foreground"
               >
                 Return Date
               </label>
 
               <div className="relative">
                 <CalendarDays
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  size={19}
                   aria-hidden="true"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
 
                 <input
-                  id="endDate"
+                  id="end-date"
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || today}
-                  className="h-12 w-full rounded-lg border border-border bg-background pl-10 pr-3 text-sm text-foreground outline-none transition hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-input bg-background pl-10 pr-4 font-garamond text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -142,23 +152,30 @@ function SearchCars() {
             <div className="flex items-end">
               <button
                 type="submit"
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/20 lg:w-auto"
+                className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 font-garamond text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 lg:w-auto"
               >
-                <Search className="h-4 w-4" aria-hidden="true" />
+                <Search size={18} aria-hidden="true" />
 
                 <span>Search Cars</span>
+
+                <ArrowRight
+                  size={17}
+                  aria-hidden="true"
+                  className="transition-transform group-hover:translate-x-1"
+                />
               </button>
             </div>
           </form>
 
-          {/* Note */}
-          <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-
-            <span className="font-garamond text-sm">
-              Find cars available for your journey
-            </span>
-          </div>
+          {/* Invalid date message */}
+          {startDate && endDate && endDate < startDate && (
+            <p
+              className="mt-3 font-garamond text-sm font-semibold text-destructive"
+              role="alert"
+            >
+              Return date must be after the pickup date.
+            </p>
+          )}
         </div>
       </div>
     </section>

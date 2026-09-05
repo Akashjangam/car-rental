@@ -33,7 +33,6 @@ function BookingCreate() {
   const { token, user } = useAuth();
 
   const [car, setCar] = useState(null);
-
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -44,10 +43,6 @@ function BookingCreate() {
   const [success, setSuccess] = useState("");
 
   const today = useMemo(() => getLocalDateString(), []);
-
-  // ==========================================
-  // LOAD CAR
-  // ==========================================
 
   useEffect(() => {
     let mounted = true;
@@ -98,10 +93,6 @@ function BookingCreate() {
     };
   }, [carId]);
 
-  // ==========================================
-  // RENTAL DAYS
-  // ==========================================
-
   const rentalDays = useMemo(() => {
     if (!startDate || !endDate) {
       return 0;
@@ -121,10 +112,6 @@ function BookingCreate() {
     return days > 0 ? days : 0;
   }, [startDate, endDate]);
 
-  // ==========================================
-  // PRICE
-  // ==========================================
-
   const pricePerDay = Number(car?.pricePerDay || 0);
   const totalAmount = rentalDays * pricePerDay;
 
@@ -134,10 +121,6 @@ function BookingCreate() {
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(amount);
-
-  // ==========================================
-  // CAR IMAGE
-  // ==========================================
 
   const carImage = useMemo(() => {
     const image = car?.image || car?.imageUrl || car?.images?.[0] || "";
@@ -151,10 +134,6 @@ function BookingCreate() {
       : `${API_ORIGIN}${image.startsWith("/") ? image : `/${image}`}`;
   }, [car]);
 
-  // ==========================================
-  // START DATE CHANGE
-  // ==========================================
-
   const handleStartDateChange = (value) => {
     setStartDate(value);
     setError("");
@@ -164,12 +143,8 @@ function BookingCreate() {
     }
   };
 
-  // ==========================================
-  // SUBMIT BOOKING
-  // ==========================================
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     setError("");
     setSuccess("");
@@ -255,10 +230,6 @@ function BookingCreate() {
     }
   };
 
-  // ==========================================
-  // LOADING
-  // ==========================================
-
   if (loading) {
     return (
       <main className="flex min-h-[70vh] items-center justify-center bg-background px-4">
@@ -285,10 +256,6 @@ function BookingCreate() {
       </main>
     );
   }
-
-  // ==========================================
-  // CAR LOAD ERROR
-  // ==========================================
 
   if (error && !car) {
     return (
@@ -327,7 +294,6 @@ function BookingCreate() {
   return (
     <main className="min-h-[75vh] bg-background px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-6xl">
-        {/* Back */}
         <Link
           to={`/cars/${carId}`}
           className="mb-6 inline-flex min-h-10 items-center gap-2 rounded-lg font-garamond text-base font-semibold text-muted-foreground transition hover:text-primary focus:outline-none focus:ring-4 focus:ring-primary/20"
@@ -336,7 +302,6 @@ function BookingCreate() {
           Back to Car Details
         </Link>
 
-        {/* Page Header */}
         <header className="mb-8 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <p className="font-garamond text-sm font-semibold uppercase tracking-[0.18em] text-primary">
             DriveNow Booking
@@ -352,7 +317,6 @@ function BookingCreate() {
           </p>
         </header>
 
-        {/* Error */}
         {error && (
           <div
             role="alert"
@@ -370,7 +334,6 @@ function BookingCreate() {
           </div>
         )}
 
-        {/* Success */}
         {success && (
           <div
             role="status"
@@ -389,10 +352,6 @@ function BookingCreate() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          {/* ==========================================
-              CAR INFORMATION
-          ========================================== */}
-
           <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
             <div className="relative h-64 bg-muted sm:h-[360px]">
               {carImage ? (
@@ -420,7 +379,7 @@ function BookingCreate() {
                 >
                   <span
                     className={`h-2 w-2 rounded-full ${
-                      car?.available ? "bg-green-600" : "bg-muted-foreground"
+                      car?.available ? "bg-success" : "bg-muted-foreground"
                     }`}
                     aria-hidden="true"
                   />
@@ -493,10 +452,6 @@ function BookingCreate() {
             </div>
           </section>
 
-          {/* ==========================================
-              BOOKING FORM
-          ========================================== */}
-
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-7">
             <div className="flex items-start gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -519,7 +474,6 @@ function BookingCreate() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-7 space-y-5">
-              {/* Pickup */}
               <div>
                 <label
                   htmlFor="startDate"
@@ -534,13 +488,14 @@ function BookingCreate() {
                   type="date"
                   min={today}
                   value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  onChange={(event) =>
+                    handleStartDateChange(event.target.value)
+                  }
                   disabled={bookingLoading || !car?.available}
                   className="h-12 w-full rounded-xl border border-border bg-background px-4 font-garamond text-base text-foreground outline-none transition hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-muted"
                 />
               </div>
 
-              {/* Return */}
               <div>
                 <label
                   htmlFor="endDate"
@@ -555,8 +510,8 @@ function BookingCreate() {
                   type="date"
                   min={startDate || today}
                   value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
+                  onChange={(event) => {
+                    setEndDate(event.target.value);
                     setError("");
                   }}
                   disabled={bookingLoading || !car?.available}
@@ -564,7 +519,6 @@ function BookingCreate() {
                 />
               </div>
 
-              {/* Price Summary */}
               <div className="rounded-2xl border border-border bg-muted/50 p-5">
                 <div className="flex items-center justify-between">
                   <h3 className="font-metal text-xl tracking-wide text-foreground">
@@ -602,7 +556,6 @@ function BookingCreate() {
                 </div>
               </div>
 
-              {/* Payment Info */}
               <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <CreditCard
                   className="mt-0.5 h-5 w-5 shrink-0 text-primary"
@@ -621,7 +574,6 @@ function BookingCreate() {
                 </div>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={
@@ -662,10 +614,6 @@ function BookingCreate() {
   );
 }
 
-// ==========================================
-// CAR INFO
-// ==========================================
-
 function CarInfo({ label, value }) {
   return (
     <div className="rounded-xl border border-border bg-muted/40 p-4">
@@ -677,10 +625,6 @@ function CarInfo({ label, value }) {
     </div>
   );
 }
-
-// ==========================================
-// SUMMARY ROW
-// ==========================================
 
 function SummaryRow({ label, value }) {
   return (

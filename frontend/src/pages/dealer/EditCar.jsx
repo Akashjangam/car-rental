@@ -1,57 +1,53 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Car,
-  CheckCircle2,
-  Image as ImageIcon,
-  Loader2,
-  Save,
-  Upload,
-} from "lucide-react";
+import { ArrowLeft, Car, ImagePlus, Loader2, Save, Upload } from "lucide-react";
 
 import { getDealerCarById, updateDealerCar } from "../../services/adminApi";
-import { useAuth } from "../../context/AuthContext";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-const initialForm = {
-  brand: "",
-  model: "",
-  year: "",
-  pricePerDay: "",
-  fuelType: "Petrol",
-  transmission: "Manual",
-  seats: "",
-  available: true,
-};
 
 function EditCar() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
 
-  const [formData, setFormData] = useState(initialForm);
-  const [existingImage, setExistingImage] = useState("");
+  const [car, setCar] = useState(null);
+
+  const [formData, setFormData] = useState({
+    brand: "",
+    model: "",
+    year: "",
+    pricePerDay: "",
+    fuelType: "Petrol",
+    transmission: "Manual",
+    seats: "",
+    available: true,
+  });
+
   const [image, setImage] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [preview, setPreview] = useState("");
+  const [existingImage, setExistingImage] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const API_ORIGIN = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return "";
+
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+      return imagePath;
+    }
+
+    return `${API_ORIGIN}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
+  };
+
   useEffect(() => {
-    const loadCar = async () => {
-      if (!id) {
-        setError("Invalid car ID.");
-        setLoading(false);
-        return;
-      }
+    const fetchCar = async () => {
+      const token = localStorage.getItem("token");
 
       if (!token) {
-        setError("You are not authorized. Please login again.");
-        setLoading(false);
+        navigate("/login");
         return;
       }
 
@@ -60,135 +56,187 @@ function EditCar() {
         setError("");
 
         const response = await getDealerCarById(id, token);
-        const car = response?.car || response?.data?.car || response;
 
-        if (!car) {
-          throw new Error("Car not found.");
+        const carData =
+          response?.car || response?.data?.car || response?.data || response;
+
+        if (!carData) {
+          throw new Error("Car details could not be found.");
         }
 
+        setCar(carData);
+
         setFormData({
-          brand: car.brand || "",
-          model: car.model || "",
-          year: car.year || "",
-          pricePerDay: car.pricePerDay || "",
-          fuelType: car.fuelType || "Petrol",
-          transmission: car.transmission || "Manual",
-          seats: car.seats || "",
-          available: car.available !== false,
+          brand: carData.brand || "",
+          model: carData.model || "",
+          year: carData.year || "",
+          pricePerDay: carData.pricePerDay || "",
+          fuelType: carData.fuelType || "Petrol",
+          transmission: carData.transmission || "Manual",
+          seats: carData.seats || "",
+          available: carData.available !== false,
         });
 
-        setExistingImage(car.image || "");
+        if (carData.image) {
+          setExistingImage(getImageUrl(carData.image));
+        }
       } catch (err) {
-        console.error("Load dealer car error:", err);
+        console.error("Fetch dealer car error:", err);
+
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/login");
+          return;
+        }
+
+        if (err.response?.status === 403) {
+          setError("You do not have permission to edit this car.");
+          return;
+        }
 
         setError(
-          err?.response?.data?.message || err?.message || "Failed to load car.",
+          err.response?.data?.message ||
+            err.message ||
+            "Unable to load car details.",
         );
       } finally {
         setLoading(false);
       }
     };
 
-    loadCar();
-  }, [id, token]);
+    if (id) {
+      fetchCar();
+    }
+  }, [id, navigate]);
 
   useEffect(() => {
-    if (!image) {
-      setPreviewUrl("");
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(image);
-
-    setPreviewUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
     };
-  }, [image]);
+  }, [preview]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
 
     setFormData((previous) => ({
       ...previous,
       [name]: type === "checkbox" ? checked : value,
     }));
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
-
-    if (!file) return;
-
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-
-    if (!allowedTypes.includes(file.type)) {
-      setError("Only JPG, JPEG, PNG, and WEBP images are allowed.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image size must be less than 5MB.");
-      return;
-    }
-
-    setError("");
-    setImage(file);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
 
     setError("");
     setSuccess("");
+  };
+
+  const handleImageChange = (event) => {
+    const selectedFile = event.target.files?.[0];
+
+    if (!selectedFile) {
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(selectedFile.type)) {
+      setError("Please select a JPG, JPEG, PNG, or WEBP image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setError("Image size must be less than 5MB.");
+      event.target.value = "";
+      return;
+    }
+
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    const imagePreview = URL.createObjectURL(selectedFile);
+
+    setImage(selectedFile);
+    setPreview(imagePreview);
+    setError("");
+    setSuccess("");
+  };
+
+  const validateForm = () => {
+    const brand = formData.brand.trim();
+    const model = formData.model.trim();
+    const year = Number(formData.year);
+    const pricePerDay = Number(formData.pricePerDay);
+    const seats = Number(formData.seats);
+
+    if (!brand) {
+      return "Brand is required.";
+    }
+
+    if (!model) {
+      return "Model is required.";
+    }
+
+    if (!formData.year || !Number.isInteger(year)) {
+      return "Please enter a valid manufacturing year.";
+    }
+
+    if (year < 1900 || year > new Date().getFullYear() + 1) {
+      return "Please enter a valid manufacturing year.";
+    }
+
+    if (!formData.pricePerDay || !Number.isFinite(pricePerDay)) {
+      return "Please enter a valid price per day.";
+    }
+
+    if (pricePerDay <= 0) {
+      return "Price per day must be greater than 0.";
+    }
+
+    if (!formData.seats || !Number.isInteger(seats)) {
+      return "Please enter a valid number of seats.";
+    }
+
+    if (seats <= 0 || seats > 50) {
+      return "Seats must be between 1 and 50.";
+    }
+
+    return "";
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
 
     if (!token) {
-      setError("You are not authorized. Please login again.");
-      return;
-    }
-
-    if (
-      !formData.brand.trim() ||
-      !formData.model.trim() ||
-      !formData.year ||
-      !formData.pricePerDay ||
-      !formData.seats
-    ) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-
-    if (Number(formData.year) < 1900 || Number(formData.year) > 2100) {
-      setError("Please enter a valid year.");
-      return;
-    }
-
-    if (Number(formData.pricePerDay) < 0) {
-      setError("Price per day cannot be negative.");
-      return;
-    }
-
-    if (Number(formData.seats) < 1 || Number(formData.seats) > 20) {
-      setError("Seats must be between 1 and 20.");
+      navigate("/login");
       return;
     }
 
     try {
       setSaving(true);
+      setError("");
+      setSuccess("");
 
       const data = new FormData();
 
       data.append("brand", formData.brand.trim());
       data.append("model", formData.model.trim());
-      data.append("year", formData.year);
-      data.append("pricePerDay", formData.pricePerDay);
+      data.append("year", String(Number(formData.year)));
+      data.append("pricePerDay", String(Number(formData.pricePerDay)));
       data.append("fuelType", formData.fuelType);
       data.append("transmission", formData.transmission);
-      data.append("seats", formData.seats);
-      data.append("available", formData.available ? "true" : "false");
+      data.append("seats", String(Number(formData.seats)));
+      data.append("available", String(formData.available));
 
-      // Dealer ownership is handled by the backend.
       if (image) {
         data.append("image", image);
       }
@@ -199,12 +247,24 @@ function EditCar() {
 
       setTimeout(() => {
         navigate("/dealer/cars");
-      }, 900);
+      }, 1000);
     } catch (err) {
       console.error("Update dealer car error:", err);
 
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      if (err.response?.status === 403) {
+        setError("You do not have permission to update this car.");
+        return;
+      }
+
       setError(
-        err?.response?.data?.message || err?.message || "Failed to update car.",
+        err.response?.data?.message ||
+          "Unable to update the car. Please try again.",
       );
     } finally {
       setSaving(false);
@@ -213,307 +273,373 @@ function EditCar() {
 
   if (loading) {
     return (
-      <main className="min-h-[70vh] bg-background px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-5xl items-center justify-center">
+      <main className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
           <div
-            className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card px-8 py-7 shadow-sm"
-            role="status"
-            aria-live="polite"
+            className="animate-pulse space-y-6"
+            aria-label="Loading car details"
           >
-            <Loader2
-              className="h-7 w-7 animate-spin text-primary"
-              aria-hidden="true"
-            />
-
-            <div className="text-center">
-              <p className="font-metal text-xl tracking-wide text-foreground">
-                Loading Car
-              </p>
-
-              <p className="mt-1 font-garamond text-sm text-muted-foreground">
-                Fetching your vehicle details...
-              </p>
-            </div>
+            <div className="h-8 w-48 rounded bg-muted" />
+            <div className="h-5 w-72 rounded bg-muted" />
+            <div className="h-[650px] rounded-2xl bg-muted" />
           </div>
         </div>
       </main>
     );
   }
 
-  const currentImage =
-    previewUrl ||
-    (existingImage
-      ? `${API_BASE_URL}${existingImage.startsWith("/") ? "" : "/"}${existingImage}`
-      : "");
+  if (error && !car) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+            <Car size={26} className="text-destructive" aria-hidden="true" />
+          </div>
+
+          <h1 className="font-metal mt-5 text-3xl text-foreground">
+            Unable to Load Car
+          </h1>
+
+          <p className="font-garamond mt-3 text-sm leading-6 text-muted-foreground">
+            {error}
+          </p>
+
+          <Link
+            to="/dealer/cars"
+            className="font-garamond mt-6 inline-flex items-center rounded-md border border-border px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <ArrowLeft size={17} className="mr-2" />
+            Back to My Cars
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-[70vh] bg-background px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-      <div className="mx-auto max-w-5xl">
-        {/* Header */}
+    <main className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
         <header className="mb-8">
           <Link
             to="/dealer/cars"
-            className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-lg font-garamond text-base font-semibold text-muted-foreground transition hover:text-primary focus:outline-none focus:ring-4 focus:ring-primary/20"
+            className="font-garamond inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <ArrowLeft size={17} className="mr-2" />
             Back to My Cars
           </Link>
 
-          <div className="flex items-start gap-4 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Car className="h-6 w-6" aria-hidden="true" />
+          <div className="mt-6 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <Car size={24} className="text-primary" aria-hidden="true" />
             </div>
 
             <div>
-              <p className="font-garamond text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                Dealer Dashboard
+              <p className="font-garamond text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+                Dealer
               </p>
 
-              <h1 className="mt-1 font-metal text-3xl tracking-wide text-foreground sm:text-4xl">
+              <h1 className="font-metal text-3xl text-foreground sm:text-4xl">
                 Edit Car
               </h1>
-
-              <p className="mt-2 font-garamond text-base leading-6 text-muted-foreground">
-                Update your vehicle details, specifications, image, and
-                availability.
-              </p>
             </div>
           </div>
+
+          <p className="font-garamond mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+            Update the details of your vehicle and keep your DriveNow listing
+            accurate.
+          </p>
         </header>
 
-        {/* Error */}
-        {error && (
-          <div
-            role="alert"
-            aria-live="polite"
-            className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-4 font-garamond text-base text-destructive"
-          >
-            <span className="font-bold">Error:</span> {error}
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="rounded-2xl border border-border bg-card shadow-sm"
+        >
+          <div className="border-b border-border p-6 sm:p-8">
+            <h2 className="font-metal text-2xl text-foreground">
+              Vehicle Information
+            </h2>
+
+            <p className="font-garamond mt-1 text-sm text-muted-foreground">
+              Update the basic information for this vehicle.
+            </p>
           </div>
-        )}
 
-        {/* Success */}
-        {success && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mb-6 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/10 px-5 py-4 font-garamond text-base text-foreground"
-          >
-            <CheckCircle2
-              className="h-5 w-5 shrink-0 text-primary"
-              aria-hidden="true"
-            />
-
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-            {/* Basic Details */}
-            <section className="border-b border-border p-5 sm:p-7">
-              <div className="mb-6">
-                <p className="font-garamond text-sm font-semibold uppercase tracking-[0.14em] text-primary">
-                  Step 01
-                </p>
-
-                <h2 className="mt-1 font-metal text-2xl tracking-wide text-foreground">
-                  Basic Details
-                </h2>
-
-                <p className="mt-1 font-garamond text-base text-muted-foreground">
-                  Update the main information about your vehicle.
-                </p>
+          <div className="space-y-8 p-6 sm:p-8">
+            {error && (
+              <div
+                role="alert"
+                className="font-garamond rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive"
+              >
+                {error}
               </div>
+            )}
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <FormInput
+            {success && (
+              <div
+                role="status"
+                className="font-garamond rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm font-medium text-primary"
+              >
+                {success}
+              </div>
+            )}
+
+            {/* Brand + Model */}
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="brand"
+                  className="font-garamond mb-2 block text-sm font-medium text-foreground"
+                >
+                  Brand
+                </label>
+
+                <input
                   id="brand"
                   name="brand"
-                  label="Brand"
+                  type="text"
                   value={formData.brand}
                   onChange={handleChange}
                   placeholder="e.g. Toyota"
-                  required
+                  autoComplete="off"
+                  className="font-garamond w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
+              </div>
 
-                <FormInput
+              <div>
+                <label
+                  htmlFor="model"
+                  className="font-garamond mb-2 block text-sm font-medium text-foreground"
+                >
+                  Model
+                </label>
+
+                <input
                   id="model"
                   name="model"
-                  label="Model"
+                  type="text"
                   value={formData.model}
                   onChange={handleChange}
                   placeholder="e.g. Camry"
-                  required
+                  autoComplete="off"
+                  className="font-garamond w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
+              </div>
+            </div>
 
-                <FormInput
+            {/* Year + Price */}
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="year"
+                  className="font-garamond mb-2 block text-sm font-medium text-foreground"
+                >
+                  Manufacturing Year
+                </label>
+
+                <input
                   id="year"
                   name="year"
-                  label="Year"
                   type="number"
                   min="1900"
-                  max="2100"
+                  max={new Date().getFullYear() + 1}
                   value={formData.year}
                   onChange={handleChange}
                   placeholder="e.g. 2024"
-                  required
-                />
-
-                <FormInput
-                  id="pricePerDay"
-                  name="pricePerDay"
-                  label="Price Per Day (₹)"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.pricePerDay}
-                  onChange={handleChange}
-                  placeholder="e.g. 2500"
-                  required
+                  className="font-garamond w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-            </section>
 
-            {/* Specifications */}
-            <section className="border-b border-border p-5 sm:p-7">
-              <div className="mb-6">
-                <p className="font-garamond text-sm font-semibold uppercase tracking-[0.14em] text-primary">
-                  Step 02
-                </p>
+              <div>
+                <label
+                  htmlFor="pricePerDay"
+                  className="font-garamond mb-2 block text-sm font-medium text-foreground"
+                >
+                  Price Per Day
+                </label>
 
-                <h2 className="mt-1 font-metal text-2xl tracking-wide text-foreground">
-                  Specifications
-                </h2>
+                <div className="relative">
+                  <span className="font-garamond pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                    ₹
+                  </span>
 
-                <p className="mt-1 font-garamond text-base text-muted-foreground">
-                  Keep the vehicle specifications accurate.
-                </p>
+                  <input
+                    id="pricePerDay"
+                    name="pricePerDay"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formData.pricePerDay}
+                    onChange={handleChange}
+                    placeholder="2500"
+                    className="font-garamond w-full rounded-lg border border-border bg-background py-3 pl-8 pr-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
               </div>
+            </div>
 
-              <div className="grid gap-5 sm:grid-cols-3">
-                <FormSelect
+            {/* Fuel + Transmission + Seats */}
+            <div className="grid gap-5 md:grid-cols-3">
+              <div>
+                <label
+                  htmlFor="fuelType"
+                  className="font-garamond mb-2 block text-sm font-medium text-foreground"
+                >
+                  Fuel Type
+                </label>
+
+                <select
                   id="fuelType"
                   name="fuelType"
-                  label="Fuel Type"
                   value={formData.fuelType}
                   onChange={handleChange}
-                  options={["Petrol", "Diesel", "Electric", "Hybrid"]}
-                />
+                  className="font-garamond w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="Petrol">Petrol</option>
+                  <option value="Diesel">Diesel</option>
+                  <option value="Electric">Electric</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="CNG">CNG</option>
+                </select>
+              </div>
 
-                <FormSelect
+              <div>
+                <label
+                  htmlFor="transmission"
+                  className="font-garamond mb-2 block text-sm font-medium text-foreground"
+                >
+                  Transmission
+                </label>
+
+                <select
                   id="transmission"
                   name="transmission"
-                  label="Transmission"
                   value={formData.transmission}
                   onChange={handleChange}
-                  options={["Manual", "Automatic"]}
-                />
+                  className="font-garamond w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="Manual">Manual</option>
+                  <option value="Automatic">Automatic</option>
+                </select>
+              </div>
 
-                <FormInput
+              <div>
+                <label
+                  htmlFor="seats"
+                  className="font-garamond mb-2 block text-sm font-medium text-foreground"
+                >
+                  Seats
+                </label>
+
+                <input
                   id="seats"
                   name="seats"
-                  label="Seats"
                   type="number"
                   min="1"
-                  max="20"
+                  max="50"
                   value={formData.seats}
                   onChange={handleChange}
-                  placeholder="e.g. 5"
-                  required
+                  placeholder="5"
+                  className="font-garamond w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-            </section>
+            </div>
 
             {/* Availability */}
-            <section className="border-b border-border p-5 sm:p-7">
-              <div className="mb-5">
-                <p className="font-garamond text-sm font-semibold uppercase tracking-[0.14em] text-primary">
-                  Step 03
-                </p>
-
-                <h2 className="mt-1 font-metal text-2xl tracking-wide text-foreground">
-                  Availability
-                </h2>
-              </div>
-
-              <label className="flex cursor-pointer items-start gap-4 rounded-2xl border border-border bg-muted/40 p-5 transition hover:bg-muted/60">
+            <div className="rounded-xl border border-border bg-background p-4">
+              <label className="flex cursor-pointer items-start gap-3">
                 <input
                   type="checkbox"
                   name="available"
                   checked={formData.available}
                   onChange={handleChange}
-                  className="mt-1 h-5 w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20"
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
                 />
 
-                <div>
-                  <p className="font-garamond text-base font-bold text-foreground">
+                <span>
+                  <span className="font-garamond block text-sm font-semibold text-foreground">
                     Car is available for booking
-                  </p>
+                  </span>
 
-                  <p className="mt-1 font-garamond text-sm leading-5 text-muted-foreground">
+                  <span className="font-garamond mt-1 block text-xs leading-5 text-muted-foreground">
                     Customers can book this vehicle when availability is
                     enabled.
-                  </p>
-                </div>
+                  </span>
+                </span>
               </label>
-            </section>
+            </div>
 
             {/* Image */}
-            <section className="border-b border-border p-5 sm:p-7">
-              <div className="mb-6">
-                <p className="font-garamond text-sm font-semibold uppercase tracking-[0.14em] text-primary">
-                  Step 04
-                </p>
+            <div>
+              <div className="mb-3">
+                <h3 className="font-metal text-sm font-semibold text-foreground">
+                  Vehicle Image
+                </h3>
 
-                <h2 className="mt-1 font-metal text-2xl tracking-wide text-foreground">
-                  Car Image
-                </h2>
-
-                <p className="mt-1 font-garamond text-base text-muted-foreground">
-                  Replace the current vehicle image if needed.
+                <p className="font-garamond mt-1 text-xs text-muted-foreground">
+                  Upload a new image only if you want to replace the current
+                  one. Maximum size: 5MB.
                 </p>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-[240px_1fr]">
-                {/* Preview */}
-                <div className="overflow-hidden rounded-2xl border border-border bg-muted">
-                  {currentImage ? (
-                    <img
-                      src={currentImage}
-                      alt={
-                        image
-                          ? "New car preview"
-                          : `${formData.brand} ${formData.model}`
-                      }
-                      className="h-48 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
-                      <ImageIcon className="h-9 w-9" aria-hidden="true" />
+              <div className="grid gap-5 md:grid-cols-2">
+                {/* Current / New Preview */}
+                <div className="overflow-hidden rounded-xl border border-border bg-background">
+                  <div className="flex aspect-video items-center justify-center">
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt="New vehicle preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : existingImage ? (
+                      <img
+                        src={existingImage}
+                        alt={`${car?.brand || "Vehicle"} ${car?.model || ""}`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="font-garamond flex flex-col items-center justify-center text-center text-muted-foreground">
+                        <ImagePlus size={32} aria-hidden="true" />
 
-                      <span className="font-garamond text-sm">No image</span>
-                    </div>
-                  )}
+                        <p className="mt-2 text-sm">
+                          No vehicle image available
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-border px-4 py-3">
+                    <p className="font-garamond text-xs font-medium text-muted-foreground">
+                      {preview ? "New Image Preview" : "Current Image"}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Upload */}
                 <div>
                   <label
                     htmlFor="image"
-                    className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border px-6 py-8 text-center transition hover:border-primary hover:bg-muted/50 focus-within:ring-4 focus-within:ring-primary/20"
+                    className="flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background px-6 text-center transition hover:border-primary hover:bg-primary/5 focus-within:border-primary"
                   >
-                    <Upload
-                      className="mb-3 h-8 w-8 text-primary"
-                      aria-hidden="true"
-                    />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                      <Upload
+                        size={22}
+                        className="text-primary"
+                        aria-hidden="true"
+                      />
+                    </div>
 
-                    <span className="font-garamond text-base font-bold text-foreground">
+                    <span className="font-garamond mt-4 text-sm font-semibold text-foreground">
                       Choose a new image
                     </span>
 
-                    <span className="mt-1 font-garamond text-sm text-muted-foreground">
-                      JPG, JPEG, PNG or WEBP — max 5MB
+                    <span className="font-garamond mt-1 text-xs text-muted-foreground">
+                      JPG, JPEG, PNG or WEBP
+                    </span>
+
+                    <span className="font-garamond mt-1 text-xs text-muted-foreground">
+                      Maximum 5MB
                     </span>
 
                     <input
@@ -527,119 +653,49 @@ function EditCar() {
                   </label>
 
                   {image && (
-                    <p className="mt-3 truncate font-garamond text-sm text-muted-foreground">
+                    <p className="font-garamond mt-2 truncate text-xs text-muted-foreground">
                       Selected: {image.name}
                     </p>
                   )}
                 </div>
               </div>
-            </section>
-
-            {/* Actions */}
-            <div className="flex flex-col-reverse gap-3 bg-muted/40 p-5 sm:flex-row sm:justify-end sm:p-7">
-              <Link
-                to="/dealer/cars"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-background px-6 py-3 font-garamond text-base font-semibold text-foreground transition hover:bg-muted focus:outline-none focus:ring-4 focus:ring-primary/20"
-              >
-                Cancel
-              </Link>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-garamond text-base font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? (
-                  <>
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" aria-hidden="true" />
-                    Update Car
-                  </>
-                )}
-              </button>
             </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col-reverse gap-3 border-t border-border p-6 sm:flex-row sm:items-center sm:justify-end sm:p-8">
+            <Link
+              to="/dealer/cars"
+              className="font-garamond inline-flex min-h-10 items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              Cancel
+            </Link>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="font-garamond inline-flex min-h-10 items-center justify-center rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? (
+                <>
+                  <Loader2
+                    size={17}
+                    className="mr-2 animate-spin"
+                    aria-hidden="true"
+                  />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Save size={17} className="mr-2" aria-hidden="true" />
+                  Update Car
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>
     </main>
-  );
-}
-
-function FormInput({
-  id,
-  name,
-  label,
-  type = "text",
-  value,
-  onChange,
-  placeholder,
-  min,
-  max,
-  step,
-  required = false,
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-2 block font-garamond text-base font-semibold text-foreground"
-      >
-        {label}{" "}
-        {required && (
-          <span className="text-destructive" aria-hidden="true">
-            *
-          </span>
-        )}
-      </label>
-
-      <input
-        id={id}
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        min={min}
-        max={max}
-        step={step}
-        required={required}
-        className="w-full rounded-xl border border-border bg-background px-4 py-3 font-garamond text-base text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-      />
-    </div>
-  );
-}
-
-function FormSelect({ id, name, label, value, onChange, options }) {
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-2 block font-garamond text-base font-semibold text-foreground"
-      >
-        {label}
-      </label>
-
-      <select
-        id={id}
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="w-full rounded-xl border border-border bg-background px-4 py-3 font-garamond text-base text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }
 

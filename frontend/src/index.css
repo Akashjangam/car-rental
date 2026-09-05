@@ -54,23 +54,23 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0.02 250);
 
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.72 0.18 230);
+  --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.965 0.01 250);
-  --secondary-foreground: oklch(0.205 0.02 250);
+  --secondary: oklch(0.94 0.05 205);
+  --secondary-foreground: oklch(0.25 0.04 230);
 
   --muted: oklch(0.965 0.01 250);
   --muted-foreground: oklch(0.52 0.02 250);
 
-  --accent: oklch(0.965 0.01 250);
-  --accent-foreground: oklch(0.205 0.02 250);
+  --accent: oklch(0.94 0.05 205);
+  --accent-foreground: oklch(0.25 0.04 230);
 
   --destructive: oklch(0.577 0.245 27.325);
 
   --border: oklch(0.91 0.015 250);
   --input: oklch(0.91 0.015 250);
-  --ring: oklch(0.65 0.02 250);
+  --ring: oklch(0.72 0.18 230);
 
   --radius: 0.625rem;
 }
@@ -85,26 +85,23 @@
   --popover: oklch(0.19 0.02 250);
   --popover-foreground: oklch(0.985 0.005 250);
 
-  --secondary: oklch(0.25 0.02 250);
+  --primary: oklch(0.76 0.17 225);
+  --primary-foreground: oklch(0.16 0.02 250);
+
+  --secondary: oklch(0.25 0.04 230);
   --secondary-foreground: oklch(0.985 0.005 250);
 
   --muted: oklch(0.25 0.02 250);
   --muted-foreground: oklch(0.7 0.02 250);
 
-  --accent: oklch(0.25 0.02 250);
+  --accent: oklch(0.25 0.04 230);
   --accent-foreground: oklch(0.985 0.005 250);
-
-  --primary: oklch(0.922 0.01 250);
-  --primary-foreground: oklch(0.145 0.02 250);
-
-  --popover: oklch(0.19 0.02 250);
-  --popover-foreground: oklch(0.985 0.005 250);
 
   --destructive: oklch(0.704 0.191 22.216);
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.55 0.02 250);
+  --ring: oklch(0.76 0.17 225);
 }
 
 @layer base {
@@ -131,14 +128,22 @@
     font: inherit;
   }
 
+  input[type="date"] {
+    color-scheme: light;
+  }
+
+  .dark input[type="date"] {
+    color-scheme: dark;
+  }
+
   button,
   a {
     -webkit-tap-highlight-color: transparent;
   }
 
   ::selection {
-    background: #30afff;
-    color: white;
+    background: var(--primary);
+    color: var(--primary-foreground);
   }
 
   .font-metal {

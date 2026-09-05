@@ -272,7 +272,7 @@ function AddCar() {
                   label="Fuel Type"
                   value={formData.fuelType}
                   onChange={handleChange}
-                  options={["Petrol", "Diesel", "Electric", "Hybrid"]}
+                  options={["Petrol", "Diesel", "Electric", "Hybrid", "CNG"]}
                 />
 
                 <SelectField

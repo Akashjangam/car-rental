@@ -1,8 +1,16 @@
 import { Link } from "react-router-dom";
 import { Car, Mail, MapPin, Phone, ArrowUpRight } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const Footer = () => {
+  const { user, loading } = useAuth();
   const currentYear = new Date().getFullYear();
+
+  const footerLinkClass =
+    "font-garamond text-lg text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+  const socialLinkClass =
+    "flex h-10 w-10 items-center justify-center rounded-full border border-border font-garamond text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   return (
     <footer className="border-t border-border bg-background">
@@ -13,7 +21,8 @@ const Footer = () => {
           <div>
             <Link
               to="/"
-              className="group flex w-fit items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="group flex w-fit items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              aria-label="DriveNow home"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary transition group-hover:border-primary">
                 <Car className="h-5 w-5" strokeWidth={1.7} aria-hidden="true" />
@@ -30,73 +39,61 @@ const Footer = () => {
             </p>
 
             {/* Social */}
-            <div className="mt-7 flex gap-2.5">
-              <a
-                href="#"
-                aria-label="Instagram"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border font-garamond text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+            <div className="mt-7 flex gap-2.5" aria-label="Social media">
+              <a href="#" aria-label="Instagram" className={socialLinkClass}>
                 IG
               </a>
 
               <a
                 href="#"
                 aria-label="Facebook"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border font-garamond text-base font-semibold text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className={`${socialLinkClass} text-base`}
               >
                 f
               </a>
 
-              <a
-                href="#"
-                aria-label="X"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border font-garamond text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
+              <a href="#" aria-label="X" className={socialLinkClass}>
                 X
               </a>
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Explore */}
           <div>
             <h3 className="font-metal text-xl text-foreground">Explore</h3>
 
             <ul className="mt-6 space-y-3.5">
               <li>
-                <Link
-                  to="/"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
+                <Link to="/" className={footerLinkClass}>
                   Home
                 </Link>
               </li>
 
               <li>
-                <Link
-                  to="/cars"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
+                <Link to="/cars" className={footerLinkClass}>
                   Browse Cars
                 </Link>
               </li>
 
               <li>
-                <Link
-                  to="/about"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
+                <Link to="/about" className={footerLinkClass}>
                   About Us
                 </Link>
               </li>
 
               <li>
-                <Link
-                  to="/how-it-works"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
+                <Link to="/how-it-works" className={footerLinkClass}>
                   How It Works
                 </Link>
               </li>
+
+              {!loading && user && (
+                <li>
+                  <Link to="/saved-cars" className={footerLinkClass}>
+                    Saved Cars
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -106,37 +103,29 @@ const Footer = () => {
 
             <ul className="mt-6 space-y-3.5">
               <li>
-                <Link
-                  to="/cars"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
+                <Link to="/cars" className={footerLinkClass}>
                   Car Rental
                 </Link>
               </li>
 
-              <li>
-                <Link
-                  to="/register"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
-                  Become a Dealer
-                </Link>
-              </li>
+              {!loading && !user && (
+                <li>
+                  <Link to="/register" className={footerLinkClass}>
+                    Become a Dealer
+                  </Link>
+                </li>
+              )}
+
+              {!loading && user && (
+                <li>
+                  <Link to="/my-bookings" className={footerLinkClass}>
+                    My Bookings
+                  </Link>
+                </li>
+              )}
 
               <li>
-                <Link
-                  to="/my-bookings"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
-                  My Bookings
-                </Link>
-              </li>
-
-              <li>
-                <Link
-                  to="/how-it-works"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
+                <Link to="/how-it-works" className={footerLinkClass}>
                   Rental Guide
                 </Link>
               </li>
@@ -169,10 +158,7 @@ const Footer = () => {
                   aria-hidden="true"
                 />
 
-                <a
-                  href="tel:+919848256694"
-                  className="font-garamond text-lg text-muted-foreground transition hover:text-primary"
-                >
+                <a href="tel:+919848256694" className={footerLinkClass}>
                   +91 9848256694
                 </a>
               </div>
@@ -186,7 +172,7 @@ const Footer = () => {
 
                 <a
                   href="mailto:support@drivenow.com"
-                  className="break-all font-garamond text-lg text-muted-foreground transition hover:text-primary"
+                  className={`${footerLinkClass} break-all`}
                 >
                   support@drivenow.com
                 </a>
@@ -207,21 +193,21 @@ const Footer = () => {
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <a
               href="#"
-              className="font-garamond text-base text-muted-foreground transition hover:text-primary"
+              className="font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Privacy Policy
             </a>
 
             <a
               href="#"
-              className="font-garamond text-base text-muted-foreground transition hover:text-primary"
+              className="font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Terms & Conditions
             </a>
 
             <a
               href="#"
-              className="inline-flex items-center gap-1 font-garamond text-base text-muted-foreground transition hover:text-primary"
+              className="inline-flex items-center gap-1 font-garamond text-base text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Support
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />

@@ -9,7 +9,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
+  "http://localhost:5000";
 
 function PaymentResult() {
   const location = useLocation();
@@ -32,13 +34,12 @@ function PaymentResult() {
       0,
   );
 
-  const formatPrice = (value) => {
-    return new Intl.NumberFormat("en-IN", {
+  const formatPrice = (value) =>
+    new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(Number(value) || 0);
-  };
 
   const formatDate = (date) => {
     if (!date) return "—";
@@ -73,8 +74,6 @@ function PaymentResult() {
 
   const endDate =
     booking?.endDate || booking?.returnDate || booking?.toDate || "";
-
-  /* PAYMENT FAILED */
 
   if (!success) {
     return (
@@ -134,12 +133,9 @@ function PaymentResult() {
     );
   }
 
-  /* PAYMENT SUCCESS */
-
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-[1400px] px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
-        {/* SUCCESS HEADER */}
         <section
           className="text-center"
           aria-labelledby="payment-success-title"
@@ -173,7 +169,6 @@ function PaymentResult() {
           </p>
         </section>
 
-        {/* PAYMENT SUMMARY */}
         <section className="mx-auto mt-12 max-w-4xl border-y border-border bg-background">
           <div className="border-b border-border px-6 py-8 text-center sm:px-10">
             <p className="font-garamond text-base text-muted-foreground">
@@ -190,7 +185,6 @@ function PaymentResult() {
             </div>
           </div>
 
-          {/* BOOKING */}
           <div className="px-6 py-8 sm:px-10 sm:py-10">
             <div className="flex items-center gap-4 border-b border-border pb-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-primary">
@@ -208,7 +202,6 @@ function PaymentResult() {
               </div>
             </div>
 
-            {/* CAR */}
             {car && (
               <div className="border-b border-border py-7">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -245,7 +238,6 @@ function PaymentResult() {
               </div>
             )}
 
-            {/* DETAILS */}
             <div className="grid border-b border-border sm:grid-cols-2">
               <DetailItem label="Booking ID" value={String(bookingId)} />
 
@@ -264,7 +256,6 @@ function PaymentResult() {
               />
             </div>
 
-            {/* CONFIRMATION */}
             <div className="mt-7 flex items-start gap-3 border border-secondary bg-secondary/20 p-4">
               <CreditCard
                 className="mt-0.5 h-[19px] w-[19px] shrink-0 text-foreground"
@@ -284,7 +275,6 @@ function PaymentResult() {
           </div>
         </section>
 
-        {/* ACTIONS */}
         <div className="mx-auto mt-7 grid max-w-4xl gap-3 sm:grid-cols-2">
           <Link
             to="/my-bookings"

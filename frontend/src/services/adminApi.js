@@ -1,8 +1,6 @@
 import api from "./api";
 
-// ==========================================
 // ADMIN - DASHBOARD
-// ==========================================
 
 export const getAdminDashboard = async (token) => {
   const response = await api.get("/admin/dashboard", {
@@ -14,9 +12,7 @@ export const getAdminDashboard = async (token) => {
   return response.data;
 };
 
-// ==========================================
 // ADMIN - BOOKINGS
-// ==========================================
 
 export const getAdminBookings = async (token) => {
   const response = await api.get("/admin/bookings", {
@@ -31,9 +27,7 @@ export const getAdminBookings = async (token) => {
 // Alias
 export const getAllBookings = getAdminBookings;
 
-// ==========================================
 // ADMIN - UPDATE BOOKING STATUS
-// ==========================================
 
 export const updateAdminBookingStatus = async (bookingId, status, token) => {
   const response = await api.put(
@@ -54,9 +48,7 @@ export const updateAdminBookingStatus = async (bookingId, status, token) => {
 // Alias
 export const updateBookingStatus = updateAdminBookingStatus;
 
-// ==========================================
 // ADMIN - USERS
-// ==========================================
 
 export const getAllUsers = async (token) => {
   const response = await api.get("/admin/users", {
@@ -68,9 +60,7 @@ export const getAllUsers = async (token) => {
   return response.data;
 };
 
-// ==========================================
 // ADMIN - UPDATE USER ROLE
-// ==========================================
 
 export const updateUserRole = async (userId, role, token) => {
   const response = await api.put(
@@ -88,9 +78,7 @@ export const updateUserRole = async (userId, role, token) => {
   return response.data;
 };
 
-// ==========================================
 // ADMIN - CREATE MEMBER
-// ==========================================
 
 export const createAdminMember = async (memberData, token) => {
   const response = await api.post("/admin/members", memberData, {
@@ -102,9 +90,7 @@ export const createAdminMember = async (memberData, token) => {
   return response.data;
 };
 
-// ==========================================
 // ADMIN - DELETE MEMBER
-// ==========================================
 
 export const deleteAdminMember = async (userId, token) => {
   const response = await api.delete(`/admin/members/${userId}`, {
@@ -116,9 +102,7 @@ export const deleteAdminMember = async (userId, token) => {
   return response.data;
 };
 
-// ==========================================
 // DEALER - GET MY CARS
-// ==========================================
 
 export const getDealerCars = async (token) => {
   const response = await api.get("/dealer/cars", {
@@ -130,9 +114,7 @@ export const getDealerCars = async (token) => {
   return response.data;
 };
 
-// ==========================================
 // DEALER - GET SINGLE CAR
-// ==========================================
 
 export const getDealerCarById = async (carId, token) => {
   const response = await api.get(`/dealer/cars/${carId}`, {
@@ -144,9 +126,7 @@ export const getDealerCarById = async (carId, token) => {
   return response.data;
 };
 
-// ==========================================
 // DEALER - CREATE CAR
-// ==========================================
 
 export const createDealerCar = async (formData, token) => {
   const response = await api.post("/dealer/cars", formData, {
@@ -159,9 +139,7 @@ export const createDealerCar = async (formData, token) => {
   return response.data;
 };
 
-// ==========================================
 // DEALER - UPDATE CAR
-// ==========================================
 
 export const updateDealerCar = async (carId, formData, token) => {
   const response = await api.put(`/dealer/cars/${carId}`, formData, {
@@ -174,9 +152,7 @@ export const updateDealerCar = async (carId, formData, token) => {
   return response.data;
 };
 
-// ==========================================
 // DEALER - DELETE CAR
-// ==========================================
 
 export const deleteDealerCar = async (carId, token) => {
   const response = await api.delete(`/dealer/cars/${carId}`, {

@@ -4,10 +4,6 @@ const User = require("../models/User");
 const Car = require("../models/Car");
 const Booking = require("../models/Booking");
 
-/* ======================================================
-   ADMIN DASHBOARD
-====================================================== */
-
 const getAdminDashboard = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments({
@@ -42,10 +38,6 @@ const getAdminDashboard = async (req, res) => {
       status: "cancelled",
     });
 
-    /* ==================================================
-       TOTAL REVENUE
-    ================================================== */
-
     const revenueResult = await Booking.aggregate([
       {
         $match: {
@@ -65,29 +57,19 @@ const getAdminDashboard = async (req, res) => {
     const totalRevenue =
       revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
 
-    /* ==================================================
-       RESPONSE
-    ================================================== */
-
     return res.status(200).json({
       success: true,
-
       stats: {
         totalUsers,
         totalDealers,
         totalAdmins,
-
         totalMembers: totalUsers + totalDealers + totalAdmins,
-
         totalCars,
-
         totalBookings,
-
         pendingBookings,
         confirmedBookings,
         completedBookings,
         cancelledBookings,
-
         totalRevenue,
       },
     });
@@ -100,10 +82,6 @@ const getAdminDashboard = async (req, res) => {
     });
   }
 };
-
-/* ======================================================
-   GET ALL USERS
-====================================================== */
 
 const getAllUsers = async (req, res) => {
   try {
@@ -124,10 +102,6 @@ const getAllUsers = async (req, res) => {
     });
   }
 };
-
-/* ======================================================
-   UPDATE USER ROLE
-====================================================== */
 
 const updateUserRole = async (req, res) => {
   try {
@@ -157,8 +131,6 @@ const updateUserRole = async (req, res) => {
       });
     }
 
-    /* Prevent admin from changing own role */
-
     if (String(req.user._id) === String(id)) {
       return res.status(400).json({
         success: false,
@@ -182,7 +154,6 @@ const updateUserRole = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "User role updated successfully",
-
       user: {
         id: user._id,
         name: user.name,
@@ -200,10 +171,6 @@ const updateUserRole = async (req, res) => {
   }
 };
 
-/* ======================================================
-   CREATE MEMBER
-====================================================== */
-
 const createAdminMember = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -215,8 +182,6 @@ const createAdminMember = async (req, res) => {
       });
     }
 
-    /* Admin can create only user/dealer */
-
     const allowedRoles = ["user", "dealer"];
 
     if (!allowedRoles.includes(role)) {
@@ -227,7 +192,6 @@ const createAdminMember = async (req, res) => {
     }
 
     const normalizedName = name.trim();
-
     const normalizedEmail = email.toLowerCase().trim();
 
     if (!normalizedName) {
@@ -274,7 +238,6 @@ const createAdminMember = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Member created successfully",
-
       user: {
         id: user._id,
         name: user.name,
@@ -292,10 +255,6 @@ const createAdminMember = async (req, res) => {
   }
 };
 
-/* ======================================================
-   DELETE MEMBER
-====================================================== */
-
 const deleteAdminMember = async (req, res) => {
   try {
     const { id } = req.params;
@@ -306,8 +265,6 @@ const deleteAdminMember = async (req, res) => {
         message: "Member ID is required",
       });
     }
-
-    /* Prevent admin from deleting own account */
 
     if (String(req.user._id) === String(id)) {
       return res.status(400).json({
@@ -341,10 +298,6 @@ const deleteAdminMember = async (req, res) => {
   }
 };
 
-/* ======================================================
-   GET ALL BOOKINGS
-====================================================== */
-
 const getAdminBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
@@ -368,16 +321,10 @@ const getAdminBookings = async (req, res) => {
   }
 };
 
-/* ======================================================
-   UPDATE BOOKING STATUS
-====================================================== */
-
 const updateAdminBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-
-    /* Validate booking ID */
 
     if (!id) {
       return res.status(400).json({
@@ -385,8 +332,6 @@ const updateAdminBookingStatus = async (req, res) => {
         message: "Booking ID is required",
       });
     }
-
-    /* Validate status */
 
     if (!status) {
       return res.status(400).json({
@@ -404,8 +349,6 @@ const updateAdminBookingStatus = async (req, res) => {
       });
     }
 
-    /* Find booking */
-
     const booking = await Booking.findById(id);
 
     if (!booking) {
@@ -415,20 +358,9 @@ const updateAdminBookingStatus = async (req, res) => {
       });
     }
 
-    /* Update status */
-
     booking.status = status;
 
-    /*
-      Important:
-      Do not manually call any mongoose middleware.
-      save() will automatically run the schema
-      validation middleware.
-    */
-
     await booking.save();
-
-    /* Get updated booking with related data */
 
     const updatedBooking = await Booking.findById(booking._id)
       .populate("user", "name email")
@@ -448,10 +380,6 @@ const updateAdminBookingStatus = async (req, res) => {
     });
   }
 };
-
-/* ======================================================
-   EXPORTS
-====================================================== */
 
 module.exports = {
   getAdminDashboard,

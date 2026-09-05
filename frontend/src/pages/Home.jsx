@@ -2,7 +2,7 @@ import Hero from "../components/home/Hero";
 import SearchCars from "../components/home/SearchCars";
 import FeaturedCars from "../components/home/FeaturedCars";
 import HowItWorks from "../components/home/HowItWorks";
-import About from "./About";
+import Testimonials from "../components/home/Testimonials";
 
 function Home() {
   return (
@@ -10,10 +10,12 @@ function Home() {
       <Hero />
 
       <SearchCars />
-      {/* <About /> */}
+
       <FeaturedCars />
 
       <HowItWorks />
+
+      <Testimonials />
     </main>
   );
 }
