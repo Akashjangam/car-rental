@@ -1,18 +1,50 @@
 const nodemailer = require("nodemailer");
+const dns = require("dns").promises;
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === "true",
+let transporter = null;
 
-  // Force IPv4
-  family: 4,
+const createTransporter = async () => {
+  if (transporter) {
+    return transporter;
+  }
 
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+  const smtpPort = Number(process.env.SMTP_PORT) || 587;
+  const smtpSecure = process.env.SMTP_SECURE === "true";
+
+  // Resolve Gmail to IPv4 only
+  const ipv4Addresses = await dns.resolve4(smtpHost);
+
+  if (!ipv4Addresses || ipv4Addresses.length === 0) {
+    throw new Error(`No IPv4 address found for ${smtpHost}`);
+  }
+
+  const ipv4Address = ipv4Addresses[0];
+
+  console.log(`SMTP IPv4 address: ${ipv4Address}`);
+
+  transporter = nodemailer.createTransport({
+    host: ipv4Address,
+    port: smtpPort,
+    secure: smtpSecure,
+
+    // Keep TLS certificate validation against smtp.gmail.com
+    tls: {
+      servername: smtpHost,
+    },
+
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
+  });
+
+  return transporter;
+};
 
 const sendPasswordResetEmail = async (email, resetUrl) => {
   if (
@@ -23,7 +55,9 @@ const sendPasswordResetEmail = async (email, resetUrl) => {
     throw new Error("SMTP email configuration is missing.");
   }
 
-  await transporter.sendMail({
+  const mailTransporter = await createTransporter();
+
+  await mailTransporter.sendMail({
     from: `"DriveNow" <${process.env.SMTP_USER}>`,
     to: email,
     subject: "DriveNow - Reset Your Password",
@@ -39,8 +73,18 @@ This link will expire in 15 minutes.
 If you did not request a password reset, you can safely ignore this email.`,
 
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; background: #f8fafc;">
-        <div style="background: #ffffff; padding: 30px; border-radius: 12px;">
+      <div style="
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 30px;
+        background: #f8fafc;
+      ">
+        <div style="
+          background: #ffffff;
+          padding: 30px;
+          border-radius: 12px;
+        ">
 
           <h1 style="margin: 0 0 20px;">
             DriveNow
