@@ -16,12 +16,13 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
 
-    // BOOKING DATES
+    // BOOKING START
     startDate: {
       type: Date,
       required: true,
     },
 
+    // BOOKING END
     endDate: {
       type: Date,
       required: true,
@@ -37,18 +38,27 @@ const bookingSchema = new mongoose.Schema(
     // BOOKING STATUS
     status: {
       type: String,
-      enum: ["pending", "confirmed", "completed", "cancelled"],
+      enum: [
+        "pending",
+        "confirmed",
+        "completed",
+        "cancelled",
+      ],
       default: "pending",
     },
 
     // PAYMENT STATUS
     paymentStatus: {
       type: String,
-      enum: ["unpaid", "paid", "failed"],
+      enum: [
+        "unpaid",
+        "paid",
+        "failed",
+      ],
       default: "unpaid",
     },
 
-    // PAYMENT DETAILS
+    // PAYMENT ID
     paymentId: {
       type: String,
       default: "",
@@ -59,14 +69,4 @@ const bookingSchema = new mongoose.Schema(
   },
 );
 
-  // VALIDATE BOOKING DATES
-  
-bookingSchema.pre("validate", function () {
-  if (this.startDate && this.endDate && this.endDate <= this.startDate) {
-    throw new Error("End date must be after start date");
-  }
-});
-
-  // EXPORT MODEL
-  
 module.exports = mongoose.model("Booking", bookingSchema);

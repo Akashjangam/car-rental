@@ -17,6 +17,10 @@ import { useAuth } from "../../context/AuthContext";
 
 const API_ORIGIN = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+/* ======================================================
+   HELPERS
+====================================================== */
+
 function getLocalDateString() {
   const now = new Date();
 
@@ -27,14 +31,46 @@ function getLocalDateString() {
   return `${year}-${month}-${day}`;
 }
 
+function getLocalDateTimeString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+/* ======================================================
+   COMPONENT
+====================================================== */
+
 function BookingCreate() {
   const { carId } = useParams();
   const navigate = useNavigate();
   const { token, user } = useAuth();
 
   const [car, setCar] = useState(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+
+  const [startDateTime, setStartDateTime] = useState("");
+  const [endDateTime, setEndDateTime] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -43,6 +79,14 @@ function BookingCreate() {
   const [success, setSuccess] = useState("");
 
   const today = useMemo(() => getLocalDateString(), []);
+
+  const minimumStartDateTime = useMemo(() => {
+    return getLocalDateTimeString();
+  }, []);
+
+  /* ======================================================
+     LOAD CAR
+  ====================================================== */
 
   useEffect(() => {
     let mounted = true;
@@ -93,27 +137,57 @@ function BookingCreate() {
     };
   }, [carId]);
 
+  /* ======================================================
+     DATE OBJECTS
+  ====================================================== */
+
+  const start = useMemo(() => {
+    if (!startDateTime) {
+      return null;
+    }
+
+    const date = new Date(startDateTime);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }, [startDateTime]);
+
+  const end = useMemo(() => {
+    if (!endDateTime) {
+      return null;
+    }
+
+    const date = new Date(endDateTime);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }, [endDateTime]);
+
+  /* ======================================================
+     RENTAL DURATION
+  ====================================================== */
+
   const rentalDays = useMemo(() => {
-    if (!startDate || !endDate) {
+    if (!start || !end) {
       return 0;
     }
 
-    const start = new Date(`${startDate}T00:00:00`);
-    const end = new Date(`${endDate}T00:00:00`);
-
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    if (end <= start) {
       return 0;
     }
 
     const difference = end.getTime() - start.getTime();
 
-    const days = Math.ceil(difference / (1000 * 60 * 60 * 24));
+    const millisecondsPerDay = 1000 * 60 * 60 * 24;
 
-    return days > 0 ? days : 0;
-  }, [startDate, endDate]);
+    return Math.ceil(difference / millisecondsPerDay);
+  }, [start, end]);
 
   const pricePerDay = Number(car?.pricePerDay || 0);
+
   const totalAmount = rentalDays * pricePerDay;
+
+  /* ======================================================
+     PRICE FORMAT
+  ====================================================== */
 
   const formatPrice = (amount) =>
     new Intl.NumberFormat("en-IN", {
@@ -121,6 +195,10 @@ function BookingCreate() {
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(amount);
+
+  /* ======================================================
+     CAR IMAGE
+  ====================================================== */
 
   const carImage = useMemo(() => {
     const image = car?.image || car?.imageUrl || car?.images?.[0] || "";
@@ -134,20 +212,43 @@ function BookingCreate() {
       : `${API_ORIGIN}${image.startsWith("/") ? image : `/${image}`}`;
   }, [car]);
 
-  const handleStartDateChange = (value) => {
-    setStartDate(value);
-    setError("");
+  /* ======================================================
+     START DATE/TIME CHANGE
+  ====================================================== */
 
-    if (endDate && value >= endDate) {
-      setEndDate("");
+  const handleStartDateTimeChange = (value) => {
+    setStartDateTime(value);
+    setError("");
+    setSuccess("");
+
+    if (endDateTime && value >= endDateTime) {
+      setEndDateTime("");
     }
   };
+
+  /* ======================================================
+     END DATE/TIME CHANGE
+  ====================================================== */
+
+  const handleEndDateTimeChange = (value) => {
+    setEndDateTime(value);
+    setError("");
+    setSuccess("");
+  };
+
+  /* ======================================================
+     SUBMIT BOOKING
+  ====================================================== */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     setError("");
     setSuccess("");
+
+    /* --------------------------------------------------
+       AUTHENTICATION
+    -------------------------------------------------- */
 
     if (!token || !user) {
       navigate("/login", {
@@ -159,30 +260,67 @@ function BookingCreate() {
       return;
     }
 
-    if (!startDate || !endDate) {
-      setError("Please select both pickup and return dates.");
+    /* --------------------------------------------------
+       VALIDATE DATE/TIME
+    -------------------------------------------------- */
+
+    if (!startDateTime || !endDateTime) {
+      setError("Please select both pickup and return date/time.");
+
       return;
     }
 
-    if (startDate < today) {
-      setError("Pickup date cannot be in the past.");
+    if (!start || !end) {
+      setError("Please select valid pickup and return times.");
+
       return;
     }
 
-    if (endDate <= startDate) {
-      setError("Return date must be after pickup date.");
+    /* --------------------------------------------------
+       PICKUP CANNOT BE IN THE PAST
+    -------------------------------------------------- */
+
+    if (start < new Date()) {
+      setError("Pickup date/time cannot be in the past.");
+
       return;
     }
+
+    /* --------------------------------------------------
+       RETURN MUST BE AFTER PICKUP
+    -------------------------------------------------- */
+
+    if (end <= start) {
+      setError("Return date/time must be after pickup date/time.");
+
+      return;
+    }
+
+    /* --------------------------------------------------
+       RENTAL DAYS
+    -------------------------------------------------- */
 
     if (rentalDays <= 0) {
-      setError("Please select valid rental dates.");
+      setError("Please select a valid rental period.");
+
       return;
     }
+
+    /* --------------------------------------------------
+       CAR AVAILABILITY
+    -------------------------------------------------- */
 
     if (!car?.available) {
       setError("This car is currently unavailable.");
+
       return;
     }
+
+    /* --------------------------------------------------
+       CREATE BOOKING
+       
+       Backend performs the final overlap check.
+    -------------------------------------------------- */
 
     try {
       setBookingLoading(true);
@@ -190,8 +328,8 @@ function BookingCreate() {
       const response = await createBooking(
         {
           carId,
-          startDate,
-          endDate,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
         },
         token,
       );
@@ -220,15 +358,28 @@ function BookingCreate() {
     } catch (err) {
       console.error("Create booking error:", err);
 
-      setError(
+      const status = err?.response?.status;
+
+      const message =
         err?.response?.data?.message ||
-          err?.message ||
-          "Failed to create booking.",
-      );
+        err?.message ||
+        "Failed to create booking.";
+
+      if (status === 409) {
+        setError(
+          "This car is already booked during the selected time. Please choose another pickup or return time.",
+        );
+      } else {
+        setError(message);
+      }
     } finally {
       setBookingLoading(false);
     }
   };
+
+  /* ======================================================
+     LOADING
+  ====================================================== */
 
   if (loading) {
     return (
@@ -256,6 +407,10 @@ function BookingCreate() {
       </main>
     );
   }
+
+  /* ======================================================
+     CAR LOAD ERROR
+  ====================================================== */
 
   if (error && !car) {
     return (
@@ -291,6 +446,10 @@ function BookingCreate() {
     );
   }
 
+  /* ======================================================
+     MAIN UI
+  ====================================================== */
+
   return (
     <main className="min-h-[75vh] bg-background px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-6xl">
@@ -302,6 +461,10 @@ function BookingCreate() {
           Back to Car Details
         </Link>
 
+        {/* ==================================================
+            HEADER
+        ================================================== */}
+
         <header className="mb-8 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <p className="font-garamond text-sm font-semibold uppercase tracking-[0.18em] text-primary">
             DriveNow Booking
@@ -312,10 +475,14 @@ function BookingCreate() {
           </h1>
 
           <p className="mt-2 max-w-2xl font-garamond text-base leading-6 text-muted-foreground">
-            Choose your rental dates and review the booking details before
-            continuing to payment.
+            Choose your pickup and return date/time. The system will check
+            whether this car is available for your selected period.
           </p>
         </header>
+
+        {/* ==================================================
+            ERROR
+        ================================================== */}
 
         {error && (
           <div
@@ -333,6 +500,10 @@ function BookingCreate() {
             </p>
           </div>
         )}
+
+        {/* ==================================================
+            SUCCESS
+        ================================================== */}
 
         {success && (
           <div
@@ -352,6 +523,10 @@ function BookingCreate() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          {/* ==================================================
+              CAR INFORMATION
+          ================================================== */}
+
           <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
             <div className="relative h-64 bg-muted sm:h-[360px]">
               {carImage ? (
@@ -444,13 +619,17 @@ function BookingCreate() {
                   </p>
 
                   <p className="mt-1 font-garamond text-sm leading-6 text-muted-foreground">
-                    Select your rental dates to calculate the final booking
-                    amount.
+                    Select your pickup and return time to check the rental
+                    period.
                   </p>
                 </div>
               </div>
             </div>
           </section>
+
+          {/* ==================================================
+              BOOKING FORM
+          ================================================== */}
 
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-7">
             <div className="flex items-start gap-4">
@@ -464,60 +643,119 @@ function BookingCreate() {
                 </p>
 
                 <h2 className="mt-1 font-metal text-2xl tracking-wide text-foreground">
-                  Rental Dates
+                  Pickup & Return
                 </h2>
 
                 <p className="mt-1 font-garamond text-base text-muted-foreground">
-                  Choose pickup and return dates.
+                  Choose the exact date and time.
                 </p>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+              {/* ==================================================
+                  PICKUP
+              ================================================== */}
+
               <div>
                 <label
-                  htmlFor="startDate"
+                  htmlFor="startDateTime"
                   className="mb-2 block font-garamond text-base font-semibold text-foreground"
                 >
-                  Pickup Date
+                  Pickup Date & Time
                 </label>
 
                 <input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  min={today}
-                  value={startDate}
+                  id="startDateTime"
+                  name="startDateTime"
+                  type="datetime-local"
+                  min={minimumStartDateTime}
+                  value={startDateTime}
                   onChange={(event) =>
-                    handleStartDateChange(event.target.value)
+                    handleStartDateTimeChange(event.target.value)
                   }
                   disabled={bookingLoading || !car?.available}
                   className="h-12 w-full rounded-xl border border-border bg-background px-4 font-garamond text-base text-foreground outline-none transition hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-muted"
                 />
+
+                <p className="mt-2 font-garamond text-sm text-muted-foreground">
+                  Select when you want to collect the car.
+                </p>
               </div>
+
+              {/* ==================================================
+                  RETURN
+              ================================================== */}
 
               <div>
                 <label
-                  htmlFor="endDate"
+                  htmlFor="endDateTime"
                   className="mb-2 block font-garamond text-base font-semibold text-foreground"
                 >
-                  Return Date
+                  Return Date & Time
                 </label>
 
                 <input
-                  id="endDate"
-                  name="endDate"
-                  type="date"
-                  min={startDate || today}
-                  value={endDate}
-                  onChange={(event) => {
-                    setEndDate(event.target.value);
-                    setError("");
-                  }}
+                  id="endDateTime"
+                  name="endDateTime"
+                  type="datetime-local"
+                  min={startDateTime || minimumStartDateTime}
+                  value={endDateTime}
+                  onChange={(event) =>
+                    handleEndDateTimeChange(event.target.value)
+                  }
                   disabled={bookingLoading || !car?.available}
                   className="h-12 w-full rounded-xl border border-border bg-background px-4 font-garamond text-base text-foreground outline-none transition hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-muted"
                 />
+
+                <p className="mt-2 font-garamond text-sm text-muted-foreground">
+                  Select when you will return the car.
+                </p>
               </div>
+
+              {/* ==================================================
+                  SELECTED PERIOD
+              ================================================== */}
+
+              {start && end && end > start && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2
+                      className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
+
+                    <div>
+                      <p className="font-garamond text-base font-bold text-foreground">
+                        Selected Rental Period
+                      </p>
+
+                      <p className="mt-2 font-garamond text-sm leading-6 text-muted-foreground">
+                        Pickup:{" "}
+                        <span className="font-semibold text-foreground">
+                          {formatDateTime(start)}
+                        </span>
+                      </p>
+
+                      <p className="font-garamond text-sm leading-6 text-muted-foreground">
+                        Return:{" "}
+                        <span className="font-semibold text-foreground">
+                          {formatDateTime(end)}
+                        </span>
+                      </p>
+
+                      <p className="mt-2 font-garamond text-sm font-semibold text-primary">
+                        The final availability check happens when you confirm
+                        the booking.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ==================================================
+                  PRICE SUMMARY
+              ================================================== */}
 
               <div className="rounded-2xl border border-border bg-muted/50 p-5">
                 <div className="flex items-center justify-between">
@@ -556,6 +794,10 @@ function BookingCreate() {
                 </div>
               </div>
 
+              {/* ==================================================
+                  PAYMENT MESSAGE
+              ================================================== */}
+
               <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <CreditCard
                   className="mt-0.5 h-5 w-5 shrink-0 text-primary"
@@ -568,19 +810,23 @@ function BookingCreate() {
                   </p>
 
                   <p className="mt-1 font-garamond text-sm leading-6 text-muted-foreground">
-                    After your booking is created, you’ll continue to the
-                    payment page.
+                    Availability is checked before the booking is created. After
+                    a successful booking, you’ll continue to payment.
                   </p>
                 </div>
               </div>
+
+              {/* ==================================================
+                  SUBMIT
+              ================================================== */}
 
               <button
                 type="submit"
                 disabled={
                   bookingLoading ||
                   !car?.available ||
-                  !startDate ||
-                  !endDate ||
+                  !startDateTime ||
+                  !endDateTime ||
                   rentalDays <= 0
                 }
                 className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 font-garamond text-base font-bold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
@@ -591,7 +837,7 @@ function BookingCreate() {
                       className="h-5 w-5 animate-spin"
                       aria-hidden="true"
                     />
-                    Creating Booking...
+                    Checking Availability...
                   </>
                 ) : (
                   <>
@@ -614,6 +860,10 @@ function BookingCreate() {
   );
 }
 
+/* ======================================================
+   CAR INFO
+====================================================== */
+
 function CarInfo({ label, value }) {
   return (
     <div className="rounded-xl border border-border bg-muted/40 p-4">
@@ -625,6 +875,10 @@ function CarInfo({ label, value }) {
     </div>
   );
 }
+
+/* ======================================================
+   SUMMARY ROW
+====================================================== */
 
 function SummaryRow({ label, value }) {
   return (

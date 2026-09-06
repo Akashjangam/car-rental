@@ -1,16 +1,12 @@
 const Booking = require("../models/Booking");
 const Car = require("../models/Car");
 
-/* ======================================================
-   CREATE BOOKING
-====================================================== */
-
 const createBooking = async (req, res) => {
   try {
     const { carId, startDate, endDate, pickupDate, returnDate } = req.body;
 
+    // Support both naming styles
     const bookingStartDate = startDate || pickupDate;
-
     const bookingEndDate = endDate || returnDate;
 
     if (!carId) {
@@ -23,7 +19,7 @@ const createBooking = async (req, res) => {
     if (!bookingStartDate || !bookingEndDate) {
       return res.status(400).json({
         success: false,
-        message: "Start date and end date are required",
+        message: "Pickup date/time and return date/time are required",
       });
     }
 
@@ -33,21 +29,23 @@ const createBooking = async (req, res) => {
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       return res.status(400).json({
         success: false,
-        message: "Invalid booking dates",
+        message: "Invalid pickup or return date/time",
       });
     }
 
     if (end <= start) {
       return res.status(400).json({
         success: false,
-        message: "Return date must be after pickup date",
+        message: "Return date/time must be after pickup date/time",
       });
     }
 
-    if (start < new Date()) {
+    const now = new Date();
+
+    if (start < now) {
       return res.status(400).json({
         success: false,
-        message: "Pickup date cannot be in the past",
+        message: "Pickup date/time cannot be in the past",
       });
     }
 
@@ -67,13 +65,10 @@ const createBooking = async (req, res) => {
       });
     }
 
-    /* --------------------------------------------------
-       CHECK DATE OVERLAP
-    -------------------------------------------------- */
-
     const overlappingBooking = await Booking.findOne({
       car: carId,
 
+      // Cancelled bookings do not block the car
       status: {
         $in: ["pending", "confirmed"],
       },
@@ -88,19 +83,18 @@ const createBooking = async (req, res) => {
     });
 
     if (overlappingBooking) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        message: "This car is already booked for the selected dates",
+        message:
+          "This car is not available for the selected pickup and return time.",
       });
     }
 
-    /* --------------------------------------------------
-       CALCULATE RENTAL DAYS
-    -------------------------------------------------- */
-
     const millisecondsPerDay = 1000 * 60 * 60 * 24;
 
-    const rentalDays = Math.ceil((end - start) / millisecondsPerDay);
+    const rentalDays = Math.ceil(
+      (end.getTime() - start.getTime()) / millisecondsPerDay,
+    );
 
     const totalAmount = rentalDays * car.pricePerDay;
 
@@ -136,10 +130,6 @@ const createBooking = async (req, res) => {
   }
 };
 
-/* ======================================================
-   GET MY BOOKINGS
-====================================================== */
-
 const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({
@@ -166,10 +156,6 @@ const getMyBookings = async (req, res) => {
     });
   }
 };
-
-/* ======================================================
-   GET SINGLE BOOKING
-====================================================== */
 
 const getBookingById = async (req, res) => {
   try {
@@ -212,10 +198,6 @@ const getBookingById = async (req, res) => {
     });
   }
 };
-
-/* ======================================================
-   CANCEL BOOKING
-====================================================== */
 
 const cancelBooking = async (req, res) => {
   try {

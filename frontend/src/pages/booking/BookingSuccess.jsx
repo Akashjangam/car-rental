@@ -23,6 +23,7 @@ function BookingSuccess() {
   const startDate = booking?.startDate || booking?.pickupDate;
   const endDate = booking?.endDate || booking?.returnDate;
 
+  // Date + Time
   const formatDate = (date) => {
     if (!date) return "Not specified";
 
@@ -32,10 +33,13 @@ function BookingSuccess() {
       return date;
     }
 
-    return parsedDate.toLocaleDateString("en-IN", {
+    return parsedDate.toLocaleString("en-IN", {
       day: "numeric",
       month: "short",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 

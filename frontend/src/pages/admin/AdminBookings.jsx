@@ -43,7 +43,10 @@ function AdminBookings() {
       const response = await getAdminBookings(token);
 
       const bookingData =
-        response?.bookings || response?.data?.bookings || response?.data || [];
+        response?.bookings ||
+        response?.data?.bookings ||
+        response?.data ||
+        [];
 
       setBookings(Array.isArray(bookingData) ? bookingData : []);
     } catch (err) {
@@ -114,16 +117,32 @@ function AdminBookings() {
   };
 
   const getCar = (booking) =>
-    booking?.car || booking?.vehicle || booking?.carDetails || null;
+    booking?.car ||
+    booking?.vehicle ||
+    booking?.carDetails ||
+    null;
 
   const getCustomer = (booking) =>
-    booking?.user || booking?.customer || booking?.customerDetails || null;
+    booking?.user ||
+    booking?.customer ||
+    booking?.customerDetails ||
+    null;
 
   const getStartDate = (booking) =>
-    booking?.startDate || booking?.pickupDate || booking?.fromDate || "";
+    booking?.startDate ||
+    booking?.pickupDate ||
+    booking?.pickupDateTime ||
+    booking?.fromDate ||
+    booking?.bookingStartDate ||
+    "";
 
   const getEndDate = (booking) =>
-    booking?.endDate || booking?.returnDate || booking?.toDate || "";
+    booking?.endDate ||
+    booking?.returnDate ||
+    booking?.returnDateTime ||
+    booking?.toDate ||
+    booking?.bookingEndDate ||
+    "";
 
   const getAmount = (booking) =>
     Number(
@@ -134,6 +153,7 @@ function AdminBookings() {
         0,
     );
 
+  // Shows both date and time
   const formatDate = (date) => {
     if (!date) return "—";
 
@@ -143,10 +163,13 @@ function AdminBookings() {
       return String(date);
     }
 
-    return parsed.toLocaleDateString("en-IN", {
+    return parsed.toLocaleString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -177,7 +200,8 @@ function AdminBookings() {
       case "canceled":
         return {
           label: "Cancelled",
-          className: "border-destructive/20 bg-destructive/10 text-destructive",
+          className:
+            "border-destructive/20 bg-destructive/10 text-destructive",
           icon: XCircle,
         };
 
@@ -196,7 +220,9 @@ function AdminBookings() {
   const filteredBookings =
     filter === "all"
       ? bookings
-      : bookings.filter((booking) => normalizedStatus(booking) === filter);
+      : bookings.filter(
+          (booking) => normalizedStatus(booking) === filter,
+        );
 
   const pendingCount = bookings.filter(
     (booking) => normalizedStatus(booking) === "pending",
@@ -242,7 +268,10 @@ function AdminBookings() {
                 to="/admin"
                 className="mb-4 inline-flex items-center gap-2 font-garamond text-sm font-semibold text-muted-foreground transition hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                <ArrowLeft
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                />
                 Admin Dashboard
               </Link>
 
@@ -266,7 +295,9 @@ function AdminBookings() {
               className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl border border-border bg-card px-5 font-garamond text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
             >
               <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${
+                  refreshing ? "animate-spin" : ""
+                }`}
                 aria-hidden="true"
               />
 
@@ -290,18 +321,30 @@ function AdminBookings() {
             />
 
             <div className="font-garamond">
-              <p className="font-bold text-destructive">Something went wrong</p>
+              <p className="font-bold text-destructive">
+                Something went wrong
+              </p>
 
-              <p className="mt-1 text-sm leading-6 text-destructive">{error}</p>
+              <p className="mt-1 text-sm leading-6 text-destructive">
+                {error}
+              </p>
             </div>
           </div>
         )}
 
         {/* Stats */}
         <div className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <StatCard label="Total" value={bookings.length} icon={CalendarDays} />
+          <StatCard
+            label="Total"
+            value={bookings.length}
+            icon={CalendarDays}
+          />
 
-          <StatCard label="Pending" value={pendingCount} icon={Clock3} />
+          <StatCard
+            label="Pending"
+            value={pendingCount}
+            icon={Clock3}
+          />
 
           <StatCard
             label="Confirmed"
@@ -315,7 +358,11 @@ function AdminBookings() {
             icon={CheckCircle2}
           />
 
-          <StatCard label="Cancelled" value={cancelledCount} icon={XCircle} />
+          <StatCard
+            label="Cancelled"
+            value={cancelledCount}
+            icon={XCircle}
+          />
         </div>
 
         {/* Filter */}
@@ -337,14 +384,19 @@ function AdminBookings() {
             </div>
 
             <div className="relative sm:w-52">
-              <label htmlFor="booking-filter" className="sr-only">
+              <label
+                htmlFor="booking-filter"
+                className="sr-only"
+              >
                 Filter bookings
               </label>
 
               <select
                 id="booking-filter"
                 value={filter}
-                onChange={(event) => setFilter(event.target.value)}
+                onChange={(event) =>
+                  setFilter(event.target.value)
+                }
                 className="min-h-11 w-full appearance-none rounded-xl border border-border bg-background px-4 pr-10 font-garamond text-sm font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="all">All Bookings</option>
@@ -366,7 +418,10 @@ function AdminBookings() {
         {filteredBookings.length === 0 ? (
           <section className="rounded-3xl border border-border bg-card px-6 py-16 text-center shadow-sm sm:px-10">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <CalendarDays className="h-8 w-8" aria-hidden="true" />
+              <CalendarDays
+                className="h-8 w-8"
+                aria-hidden="true"
+              />
             </div>
 
             <h2 className="mt-6 font-metal text-3xl text-foreground">
@@ -445,11 +500,14 @@ function AdminBookings() {
 
                   <tbody>
                     {filteredBookings.map((booking) => {
-                      const bookingId = booking?._id || booking?.id;
+                      const bookingId =
+                        booking?._id || booking?.id;
 
                       const customer = getCustomer(booking);
                       const car = getCar(booking);
-                      const status = getStatusConfig(booking?.status);
+                      const status = getStatusConfig(
+                        booking?.status,
+                      );
 
                       return (
                         <tr
@@ -458,7 +516,8 @@ function AdminBookings() {
                         >
                           <td className="px-6 py-5">
                             <p className="font-garamond text-base font-bold text-foreground">
-                              {customer?.name || "Unknown Customer"}
+                              {customer?.name ||
+                                "Unknown Customer"}
                             </p>
 
                             <p className="mt-1 break-all font-garamond text-sm text-muted-foreground">
@@ -478,17 +537,24 @@ function AdminBookings() {
 
                           <td className="px-6 py-5">
                             <p className="font-garamond text-sm font-semibold text-foreground">
-                              {formatDate(getStartDate(booking))}
+                              {formatDate(
+                                getStartDate(booking),
+                              )}
                             </p>
 
                             <p className="mt-1 font-garamond text-xs text-muted-foreground">
-                              to {formatDate(getEndDate(booking))}
+                              to{" "}
+                              {formatDate(
+                                getEndDate(booking),
+                              )}
                             </p>
                           </td>
 
                           <td className="px-6 py-5">
                             <p className="font-garamond text-base font-bold text-foreground">
-                              {formatPrice(getAmount(booking))}
+                              {formatPrice(
+                                getAmount(booking),
+                              )}
                             </p>
                           </td>
 
@@ -497,19 +563,32 @@ function AdminBookings() {
                               aria-label={`Change status for booking ${String(
                                 bookingId,
                               ).slice(-8)}`}
-                              value={booking?.status || "pending"}
+                              value={
+                                booking?.status || "pending"
+                              }
                               onChange={(event) =>
-                                handleStatusChange(booking, event.target.value)
+                                handleStatusChange(
+                                  booking,
+                                  event.target.value,
+                                )
                               }
                               className={`rounded-xl border px-3 py-2 font-garamond text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 ${status.className}`}
                             >
-                              <option value="pending">Pending</option>
+                              <option value="pending">
+                                Pending
+                              </option>
 
-                              <option value="confirmed">Confirmed</option>
+                              <option value="confirmed">
+                                Confirmed
+                              </option>
 
-                              <option value="completed">Completed</option>
+                              <option value="completed">
+                                Completed
+                              </option>
 
-                              <option value="cancelled">Cancelled</option>
+                              <option value="cancelled">
+                                Cancelled
+                              </option>
                             </select>
                           </td>
 
@@ -535,12 +614,15 @@ function AdminBookings() {
               className="space-y-4 lg:hidden"
             >
               {filteredBookings.map((booking) => {
-                const bookingId = booking?._id || booking?.id;
+                const bookingId =
+                  booking?._id || booking?.id;
 
                 const customer = getCustomer(booking);
                 const car = getCar(booking);
 
-                const status = getStatusConfig(booking?.status);
+                const status = getStatusConfig(
+                  booking?.status,
+                );
 
                 const StatusIcon = status.icon;
 
@@ -557,7 +639,8 @@ function AdminBookings() {
                         </p>
 
                         <h2 className="mt-1 truncate font-metal text-2xl text-foreground">
-                          {customer?.name || "Unknown Customer"}
+                          {customer?.name ||
+                            "Unknown Customer"}
                         </h2>
 
                         <p className="mt-1 break-all font-garamond text-sm text-muted-foreground">
@@ -581,7 +664,10 @@ function AdminBookings() {
                     <div className="mt-5 rounded-2xl border border-border bg-muted p-4">
                       <div className="flex items-center gap-4">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
-                          <Car className="h-5 w-5" aria-hidden="true" />
+                          <Car
+                            className="h-5 w-5"
+                            aria-hidden="true"
+                          />
                         </div>
 
                         <div>
@@ -590,7 +676,8 @@ function AdminBookings() {
                           </p>
 
                           <p className="mt-1 font-garamond text-base font-bold text-foreground">
-                            {car?.brand || "Unknown"} {car?.model || ""}
+                            {car?.brand || "Unknown"}{" "}
+                            {car?.model || ""}
                           </p>
                         </div>
                       </div>
@@ -600,12 +687,16 @@ function AdminBookings() {
                     <div className="mt-3 grid grid-cols-2 gap-3">
                       <InfoBox
                         label="Pickup"
-                        value={formatDate(getStartDate(booking))}
+                        value={formatDate(
+                          getStartDate(booking),
+                        )}
                       />
 
                       <InfoBox
                         label="Return"
-                        value={formatDate(getEndDate(booking))}
+                        value={formatDate(
+                          getEndDate(booking),
+                        )}
                       />
                     </div>
 
@@ -623,7 +714,9 @@ function AdminBookings() {
                       </div>
 
                       <span className="font-garamond text-lg font-bold text-foreground">
-                        {formatPrice(getAmount(booking))}
+                        {formatPrice(
+                          getAmount(booking),
+                        )}
                       </span>
                     </div>
 
@@ -639,19 +732,32 @@ function AdminBookings() {
                       <div className="relative">
                         <select
                           id={`status-${bookingId}`}
-                          value={booking?.status || "pending"}
+                          value={
+                            booking?.status || "pending"
+                          }
                           onChange={(event) =>
-                            handleStatusChange(booking, event.target.value)
+                            handleStatusChange(
+                              booking,
+                              event.target.value,
+                            )
                           }
                           className={`min-h-11 w-full appearance-none rounded-xl border px-4 pr-10 font-garamond text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 ${status.className}`}
                         >
-                          <option value="pending">Pending</option>
+                          <option value="pending">
+                            Pending
+                          </option>
 
-                          <option value="confirmed">Confirmed</option>
+                          <option value="confirmed">
+                            Confirmed
+                          </option>
 
-                          <option value="completed">Completed</option>
+                          <option value="completed">
+                            Completed
+                          </option>
 
-                          <option value="cancelled">Cancelled</option>
+                          <option value="cancelled">
+                            Cancelled
+                          </option>
                         </select>
 
                         <ChevronDown
@@ -691,7 +797,10 @@ function StatCard({ label, value, icon: Icon }) {
         </div>
 
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" aria-hidden="true" />
+          <Icon
+            className="h-5 w-5"
+            aria-hidden="true"
+          />
         </div>
       </div>
     </div>

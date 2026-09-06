@@ -11,6 +11,7 @@ import {
   Heart,
   Sun,
   Moon,
+  CalendarDays,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -57,7 +58,8 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  const isSectionActive = (path) => location.pathname.startsWith(path);
+  const isSectionActive = (path) =>
+    location.pathname.startsWith(path);
 
   const navLinkClass = (path) =>
     `relative flex items-center py-2 font-garamond text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
@@ -68,7 +70,9 @@ const Navbar = () => {
 
   const roleLinkClass = (active) =>
     `flex items-center gap-1.5 rounded-md font-garamond text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-      active ? "text-primary" : "text-foreground/75 hover:text-foreground"
+      active
+        ? "text-primary"
+        : "text-foreground/75 hover:text-foreground"
     }`;
 
   return (
@@ -101,6 +105,7 @@ const Navbar = () => {
         >
           <Link to="/" className={navLinkClass("/")}>
             Home
+
             {isActive("/") && (
               <span
                 className="absolute -bottom-1 left-0 h-px w-full bg-primary"
@@ -111,6 +116,7 @@ const Navbar = () => {
 
           <Link to="/cars" className={navLinkClass("/cars")}>
             Cars
+
             {isActive("/cars") && (
               <span
                 className="absolute -bottom-1 left-0 h-px w-full bg-primary"
@@ -121,6 +127,7 @@ const Navbar = () => {
 
           <Link to="/about" className={navLinkClass("/about")}>
             About
+
             {isActive("/about") && (
               <span
                 className="absolute -bottom-1 left-0 h-px w-full bg-primary"
@@ -129,8 +136,12 @@ const Navbar = () => {
             )}
           </Link>
 
-          <Link to="/how-it-works" className={navLinkClass("/how-it-works")}>
+          <Link
+            to="/how-it-works"
+            className={navLinkClass("/how-it-works")}
+          >
             How It Works
+
             {isActive("/how-it-works") && (
               <span
                 className="absolute -bottom-1 left-0 h-px w-full bg-primary"
@@ -139,14 +150,35 @@ const Navbar = () => {
             )}
           </Link>
 
+          {/* User Navigation */}
+          {!loading && user && !isDealer && !isAdmin && (
+            <Link
+              to="/my-bookings"
+              className={roleLinkClass(
+                isSectionActive("/my-bookings"),
+              )}
+            >
+              <CalendarDays
+                className="h-4 w-4"
+                aria-hidden="true"
+              />
+              My Bookings
+            </Link>
+          )}
+
           {/* Dealer Navigation */}
           {isDealer && (
             <>
               <Link
                 to="/dealer/cars"
-                className={roleLinkClass(isSectionActive("/dealer"))}
+                className={roleLinkClass(
+                  isSectionActive("/dealer"),
+                )}
               >
-                <CarFront className="h-4 w-4" aria-hidden="true" />
+                <CarFront
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                />
                 My Cars
               </Link>
 
@@ -156,7 +188,10 @@ const Navbar = () => {
                   location.pathname === "/dealer/cars/add",
                 )}
               >
-                <Plus className="h-4 w-4" aria-hidden="true" />
+                <Plus
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                />
                 Add Car
               </Link>
             </>
@@ -166,9 +201,14 @@ const Navbar = () => {
           {isAdmin && (
             <Link
               to="/admin"
-              className={roleLinkClass(isSectionActive("/admin"))}
+              className={roleLinkClass(
+                isSectionActive("/admin"),
+              )}
             >
-              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+              <LayoutDashboard
+                className="h-4 w-4"
+                aria-hidden="true"
+              />
               Admin
             </Link>
           )}
@@ -182,7 +222,9 @@ const Navbar = () => {
             onClick={toggleTheme}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground/70 transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={
-              darkMode ? "Switch to light mode" : "Switch to dark mode"
+              darkMode
+                ? "Switch to light mode"
+                : "Switch to dark mode"
             }
             title={darkMode ? "Light mode" : "Dark mode"}
           >
@@ -203,6 +245,26 @@ const Navbar = () => {
 
           {!loading && user ? (
             <>
+              {/* My Bookings */}
+              {!isDealer && !isAdmin && (
+                <Link
+                  to="/my-bookings"
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border border-border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    isSectionActive("/my-bookings")
+                      ? "border-primary text-primary"
+                      : "text-foreground/70 hover:border-primary hover:text-primary"
+                  }`}
+                  aria-label="My bookings"
+                  title="My bookings"
+                >
+                  <CalendarDays
+                    className="h-[17px] w-[17px]"
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+                </Link>
+              )}
+
               {/* Saved Cars */}
               <Link
                 to="/saved-cars"
@@ -237,7 +299,9 @@ const Navbar = () => {
                   </p>
 
                   <p className="font-garamond text-xs capitalize text-muted-foreground">
-                    {user.role === "user" ? "Customer" : user.role}
+                    {user.role === "user"
+                      ? "Customer"
+                      : user.role}
                   </p>
                 </div>
               </div>
@@ -253,6 +317,7 @@ const Navbar = () => {
                   strokeWidth={1.8}
                   aria-hidden="true"
                 />
+
                 Logout
               </button>
             </>
@@ -282,7 +347,9 @@ const Navbar = () => {
             onClick={toggleTheme}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={
-              darkMode ? "Switch to light mode" : "Switch to dark mode"
+              darkMode
+                ? "Switch to light mode"
+                : "Switch to dark mode"
             }
             title={darkMode ? "Light mode" : "Dark mode"}
           >
@@ -295,16 +362,26 @@ const Navbar = () => {
 
           <button
             type="button"
-            onClick={() => setMobileOpen((prev) => !prev)}
+            onClick={() =>
+              setMobileOpen((prev) => !prev)
+            }
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-label={
+              mobileOpen ? "Close menu" : "Open menu"
+            }
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
           >
             {mobileOpen ? (
-              <X className="h-5 w-5" aria-hidden="true" />
+              <X
+                className="h-5 w-5"
+                aria-hidden="true"
+              />
             ) : (
-              <Menu className="h-5 w-5" aria-hidden="true" />
+              <Menu
+                className="h-5 w-5"
+                aria-hidden="true"
+              />
             )}
           </button>
         </div>
@@ -317,7 +394,10 @@ const Navbar = () => {
           className="border-t border-border bg-background md:hidden"
         >
           <div className="mx-auto max-w-[1400px] px-5 py-5 sm:px-8">
-            <nav className="space-y-1" aria-label="Mobile navigation">
+            <nav
+              className="space-y-1"
+              aria-label="Mobile navigation"
+            >
               {[
                 ["/", "Home"],
                 ["/cars", "Cars"],
@@ -338,18 +418,43 @@ const Navbar = () => {
                 </Link>
               ))}
 
+              {/* My Bookings */}
+              {!loading &&
+                user &&
+                !isDealer &&
+                !isAdmin && (
+                  <Link
+                    to="/my-bookings"
+                    onClick={closeMobile}
+                    className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                      isSectionActive("/my-bookings")
+                        ? "bg-primary/10 text-primary"
+                        : "text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <CalendarDays
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
+                    My Bookings
+                  </Link>
+                )}
+
               {/* Saved Cars */}
               {!loading && user && (
                 <Link
                   to="/saved-cars"
                   onClick={closeMobile}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg transition focus:outline-none focus-visible:ring-2 focus:ring-primary ${
                     isActive("/saved-cars")
                       ? "bg-primary/10 text-primary"
                       : "text-foreground hover:bg-muted"
                   }`}
                 >
-                  <Heart className="h-4 w-4" aria-hidden="true" />
+                  <Heart
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
                   Saved Cars
                 </Link>
               )}
@@ -366,7 +471,10 @@ const Navbar = () => {
                         : "text-foreground hover:bg-muted"
                     }`}
                   >
-                    <CarFront className="h-4 w-4" aria-hidden="true" />
+                    <CarFront
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
                     My Cars
                   </Link>
 
@@ -374,12 +482,16 @@ const Navbar = () => {
                     to="/dealer/cars/add"
                     onClick={closeMobile}
                     className={`flex items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                      location.pathname === "/dealer/cars/add"
+                      location.pathname ===
+                      "/dealer/cars/add"
                         ? "bg-primary text-primary-foreground"
                         : "bg-primary text-primary-foreground hover:opacity-90"
                     }`}
                   >
-                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    <Plus
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
                     Add New Car
                   </Link>
                 </>
@@ -396,7 +508,10 @@ const Navbar = () => {
                       : "text-foreground hover:bg-muted"
                   }`}
                 >
-                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                  <LayoutDashboard
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
                   Admin Dashboard
                 </Link>
               )}
@@ -408,7 +523,10 @@ const Navbar = () => {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 rounded-2xl bg-muted/60 p-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <UserRound className="h-5 w-5" aria-hidden="true" />
+                      <UserRound
+                        className="h-5 w-5"
+                        aria-hidden="true"
+                      />
                     </div>
 
                     <div className="min-w-0">
@@ -417,7 +535,9 @@ const Navbar = () => {
                       </p>
 
                       <p className="font-garamond text-sm capitalize text-muted-foreground">
-                        {user.role === "user" ? "Customer" : user.role}
+                        {user.role === "user"
+                          ? "Customer"
+                          : user.role}
                       </p>
                     </div>
                   </div>
@@ -427,7 +547,10 @@ const Navbar = () => {
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2 rounded-xl px-4 py-3 font-garamond text-lg font-semibold text-destructive transition hover:bg-destructive/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    <LogOut
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
                     Logout
                   </button>
                 </div>

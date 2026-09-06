@@ -22,25 +22,38 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // User Booking
 const BookingCreate = lazy(() => import("./pages/booking/BookingCreate"));
+
 const BookingSuccess = lazy(() => import("./pages/booking/BookingSuccess"));
+
 const MyBookings = lazy(() => import("./pages/booking/MyBookings"));
+
+const BookingDetails = lazy(() => import("./pages/booking/BookingDetails"));
 
 // Payment
 const Payment = lazy(() => import("./pages/payment/Payment"));
+
 const PaymentResult = lazy(() => import("./pages/payment/PaymentResult"));
 
 // Dealer
 const DealerCars = lazy(() => import("./pages/dealer/DealerCars"));
+
 const AddCar = lazy(() => import("./pages/dealer/AddCar"));
+
 const EditCar = lazy(() => import("./pages/dealer/EditCar"));
 
 // Admin
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+
 const AdminCars = lazy(() => import("./pages/admin/AdminCars"));
+
 const AdminCarsAdd = lazy(() => import("./pages/admin/AdminCarsAdd"));
+
 const AdminCarsEdit = lazy(() => import("./pages/admin/AdminCarsEdit"));
+
 const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
+
 const AdminMembers = lazy(() => import("./pages/admin/AdminMembers"));
+
 const AdminMemberAdd = lazy(() => import("./pages/admin/AdminMemberAdd"));
 
 const PageLoader = () => (
@@ -98,6 +111,12 @@ function App() {
             <Route path="/booking-success" element={<BookingSuccess />} />
 
             <Route path="/my-bookings" element={<MyBookings />} />
+
+            {/* VIEW BOOKING DETAILS */}
+            <Route
+              path="/my-bookings/:bookingId"
+              element={<BookingDetails />}
+            />
 
             <Route path="/payment/:bookingId" element={<Payment />} />
 
