@@ -23,7 +23,8 @@
     "multer": "^2.3.0",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^10.0.0",
-    "paytmchecksum": "^1.5.1"
+    "paytmchecksum": "^1.5.1",
+    "resend": "^6.26.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
