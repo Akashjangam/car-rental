@@ -4,15 +4,12 @@ const dns = require("dns").promises;
 let transporter = null;
 
 const createTransporter = async () => {
-  if (transporter) {
-    return transporter;
-  }
+  if (transporter) return transporter;
 
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
   const smtpPort = Number(process.env.SMTP_PORT) || 587;
   const smtpSecure = process.env.SMTP_SECURE === "true";
 
-  // Resolve Gmail to IPv4 only
   const ipv4Addresses = await dns.resolve4(smtpHost);
 
   if (!ipv4Addresses || ipv4Addresses.length === 0) {
@@ -28,7 +25,6 @@ const createTransporter = async () => {
     port: smtpPort,
     secure: smtpSecure,
 
-    // Keep TLS certificate validation against smtp.gmail.com
     tls: {
       servername: smtpHost,
     },
@@ -90,9 +86,7 @@ If you did not request a password reset, you can safely ignore this email.`,
             DriveNow
           </h1>
 
-          <h2>
-            Password Reset
-          </h2>
+          <h2>Password Reset</h2>
 
           <p>
             You requested to reset the password for your DriveNow account.
