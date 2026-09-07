@@ -1,6 +1,8 @@
 const Car = require("../models/Car");
 
+// =====================================================
 // CREATE DEALER CAR
+// =====================================================
 
 const createDealerCar = async (req, res) => {
   try {
@@ -8,6 +10,7 @@ const createDealerCar = async (req, res) => {
       brand,
       model,
       year,
+      numberPlate,
       pricePerDay,
       fuelType,
       transmission,
@@ -20,6 +23,7 @@ const createDealerCar = async (req, res) => {
       !brand ||
       !model ||
       !year ||
+      !numberPlate ||
       !pricePerDay ||
       !fuelType ||
       !transmission ||
@@ -31,6 +35,21 @@ const createDealerCar = async (req, res) => {
       });
     }
 
+    // Format number plate
+    const formattedNumberPlate = numberPlate.trim().toUpperCase();
+
+    // Check duplicate number plate
+    const existingCar = await Car.findOne({
+      numberPlate: formattedNumberPlate,
+    });
+
+    if (existingCar) {
+      return res.status(400).json({
+        success: false,
+        message: "A car with this number plate already exists.",
+      });
+    }
+
     // Cloudinary image URL
     const image = req.file ? req.file.path : "";
 
@@ -39,6 +58,9 @@ const createDealerCar = async (req, res) => {
       brand: brand.trim(),
       model: model.trim(),
       year: Number(year),
+
+      numberPlate: formattedNumberPlate,
+
       pricePerDay: Number(pricePerDay),
       fuelType,
       transmission,
@@ -63,6 +85,14 @@ const createDealerCar = async (req, res) => {
   } catch (error) {
     console.error("Create dealer car error:", error);
 
+    // Duplicate number plate
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "A car with this number plate already exists.",
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Failed to add car.",
@@ -71,7 +101,9 @@ const createDealerCar = async (req, res) => {
   }
 };
 
+// =====================================================
 // GET DEALER CARS
+// =====================================================
 
 const getDealerCars = async (req, res) => {
   try {
@@ -97,7 +129,9 @@ const getDealerCars = async (req, res) => {
   }
 };
 
+// =====================================================
 // GET SINGLE DEALER CAR
+// =====================================================
 
 const getDealerCarById = async (req, res) => {
   try {
@@ -135,7 +169,9 @@ const getDealerCarById = async (req, res) => {
   }
 };
 
+// =====================================================
 // UPDATE DEALER CAR
+// =====================================================
 
 const updateDealerCar = async (req, res) => {
   try {
@@ -143,6 +179,7 @@ const updateDealerCar = async (req, res) => {
       brand,
       model,
       year,
+      numberPlate,
       pricePerDay,
       fuelType,
       transmission,
@@ -163,11 +200,43 @@ const updateDealerCar = async (req, res) => {
       });
     }
 
-    // Update fields only when provided
-    if (brand !== undefined) car.brand = brand.trim();
-    if (model !== undefined) car.model = model.trim();
+    // =================================================
+    // UPDATE CAR DETAILS
+    // =================================================
+
+    if (brand !== undefined && brand.trim() !== "") {
+      car.brand = brand.trim();
+    }
+
+    if (model !== undefined && model.trim() !== "") {
+      car.model = model.trim();
+    }
+
     if (year !== undefined && year !== "") {
       car.year = Number(year);
+    }
+
+    // =================================================
+    // UPDATE NUMBER PLATE
+    // =================================================
+
+    if (numberPlate !== undefined && numberPlate.trim() !== "") {
+      const formattedNumberPlate = numberPlate.trim().toUpperCase();
+
+      // Check whether another car already has this plate
+      const existingCar = await Car.findOne({
+        numberPlate: formattedNumberPlate,
+        _id: { $ne: req.params.id },
+      });
+
+      if (existingCar) {
+        return res.status(400).json({
+          success: false,
+          message: "A car with this number plate already exists.",
+        });
+      }
+
+      car.numberPlate = formattedNumberPlate;
     }
 
     if (pricePerDay !== undefined && pricePerDay !== "") {
@@ -186,11 +255,18 @@ const updateDealerCar = async (req, res) => {
       car.seats = Number(seats);
     }
 
+    // =================================================
+    // UPDATE AVAILABILITY
+    // =================================================
+
     if (available !== undefined) {
       car.available = available === "true" || available === true;
     }
 
-    // Update image with Cloudinary URL
+    // =================================================
+    // UPDATE IMAGE
+    // =================================================
+
     if (req.file) {
       car.image = req.file.path;
     }
@@ -207,10 +283,19 @@ const updateDealerCar = async (req, res) => {
   } catch (error) {
     console.error("Update dealer car error:", error);
 
+    // Invalid MongoDB ID
     if (error.name === "CastError") {
       return res.status(400).json({
         success: false,
         message: "Invalid car ID.",
+      });
+    }
+
+    // Duplicate number plate
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "A car with this number plate already exists.",
       });
     }
 
@@ -222,7 +307,9 @@ const updateDealerCar = async (req, res) => {
   }
 };
 
+// =====================================================
 // DELETE DEALER CAR
+// =====================================================
 
 const deleteDealerCar = async (req, res) => {
   try {
@@ -261,7 +348,9 @@ const deleteDealerCar = async (req, res) => {
   }
 };
 
+// =====================================================
 // EXPORTS
+// =====================================================
 
 module.exports = {
   createDealerCar,
