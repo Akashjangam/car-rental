@@ -24,7 +24,13 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
+
+  // Old Vercel URL
   "https://drivenow-carrental.vercel.app",
+
+  // Current Vercel URL
+  "https://drivenow-car-rental-5heb5dpwo-task-manager20.vercel.app",
 ];
 
 app.use(
@@ -46,7 +52,14 @@ app.use(
 
     credentials: true,
 
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
 
     allowedHeaders: [
       "Content-Type",
@@ -60,7 +73,12 @@ app.use(
 ===================================================== */
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  express.urlencoded({
+    extended: true,
+  }),
+);
 
 /* =====================================================
    STATIC UPLOADS
