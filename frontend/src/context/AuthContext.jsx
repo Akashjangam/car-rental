@@ -13,9 +13,7 @@ export const AuthProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(true);
 
-  // =========================================================
   // LOAD USER FROM EXISTING TOKEN
-  // =========================================================
 
   useEffect(() => {
     let mounted = true;
@@ -79,9 +77,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // =========================================================
   // REGISTER
-  // =========================================================
 
   const register = async (userData) => {
     const response = await registerUser(userData);
@@ -158,9 +154,7 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
-  // =========================================================
   // LOGIN
-  // =========================================================
 
   const login = async (loginData) => {
     const response = await loginUser(loginData);
@@ -234,9 +228,7 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
-  // =========================================================
   // LOGOUT
-  // =========================================================
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -245,9 +237,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // =========================================================
   // AUTH VALUE
-  // =========================================================
 
   const value = {
     user,

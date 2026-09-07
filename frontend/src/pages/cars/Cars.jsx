@@ -152,6 +152,7 @@ function Cars() {
         car?.name,
         car?.brand,
         car?.model,
+        car?.numberPlate,
         car?.category,
         car?.fuelType,
         car?.transmission,
@@ -321,7 +322,10 @@ function Cars() {
           <div className="flex min-h-[350px] items-center justify-center">
             <div className="w-full max-w-xl border-y border-border px-6 py-12 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                <CarFront className="h-8 w-8 text-primary" aria-hidden="true" />
+                <CarFront
+                  className="h-8 w-8 text-primary"
+                  aria-hidden="true"
+                />
               </div>
 
               <h2 className="mt-6 font-metal text-4xl text-foreground">
@@ -423,10 +427,13 @@ function CarCard({ car, reviewData }) {
     }
 
     try {
-      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
+      const savedCars = JSON.parse(
+        localStorage.getItem("savedCars") || "[]",
+      );
 
       const alreadySaved = savedCars.some(
-        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
+        (savedCar) =>
+          String(savedCar?._id || savedCar?.id) === String(carId),
       );
 
       setIsSaved(alreadySaved);
@@ -445,17 +452,21 @@ function CarCard({ car, reviewData }) {
     }
 
     try {
-      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
+      const savedCars = JSON.parse(
+        localStorage.getItem("savedCars") || "[]",
+      );
 
       const alreadySaved = savedCars.some(
-        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
+        (savedCar) =>
+          String(savedCar?._id || savedCar?.id) === String(carId),
       );
 
       let updatedCars;
 
       if (alreadySaved) {
         updatedCars = savedCars.filter(
-          (savedCar) => String(savedCar?._id || savedCar?.id) !== String(carId),
+          (savedCar) =>
+            String(savedCar?._id || savedCar?.id) !== String(carId),
         );
       } else {
         updatedCars = [...savedCars, car];
@@ -531,7 +542,9 @@ function CarCard({ car, reviewData }) {
               : "border-border bg-background/90 text-foreground hover:border-primary hover:text-primary"
           }`}
           aria-label={
-            isSaved ? `Remove ${carName} from saved cars` : `Save ${carName}`
+            isSaved
+              ? `Remove ${carName} from saved cars`
+              : `Save ${carName}`
           }
           aria-pressed={isSaved}
           title={isSaved ? "Remove from saved cars" : "Save car"}
@@ -574,6 +587,17 @@ function CarCard({ car, reviewData }) {
         </div>
 
         {/* ====================================================
+            NUMBER PLATE
+        ===================================================== */}
+        {car?.numberPlate && (
+          <div className="mt-3">
+            <span className="inline-flex rounded-lg border border-border bg-muted/30 px-3 py-1.5 font-garamond text-sm font-semibold uppercase tracking-wider text-foreground">
+              Number Plate: {car.numberPlate}
+            </span>
+          </div>
+        )}
+
+        {/* ====================================================
             REVIEWS
         ===================================================== */}
         <div className="mt-4 flex items-center gap-2">
@@ -602,7 +626,10 @@ function CarCard({ car, reviewData }) {
             SPECIFICATIONS
         ===================================================== */}
         <div className="mt-5 grid grid-cols-3 divide-x divide-border border-y border-border py-4">
-          <SpecItem icon={<Gauge className="h-4 w-4" />} label={transmission} />
+          <SpecItem
+            icon={<Gauge className="h-4 w-4" />}
+            label={transmission}
+          />
 
           <SpecItem icon={<Fuel className="h-4 w-4" />} label={fuel} />
 

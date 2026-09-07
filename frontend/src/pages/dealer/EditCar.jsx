@@ -1,8 +1,19 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Car, ImagePlus, Loader2, Save, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  Car,
+  ImagePlus,
+  Loader2,
+  Save,
+  Upload,
+} from "lucide-react";
 
-import { getDealerCarById, updateDealerCar } from "../../services/adminApi";
+import {
+  getDealerCarById,
+  updateDealerCar,
+} from "../../services/adminApi";
 
 function EditCar() {
   const { id } = useParams();
@@ -14,6 +25,7 @@ function EditCar() {
     brand: "",
     model: "",
     year: "",
+    numberPlate: "",
     pricePerDay: "",
     fuelType: "Petrol",
     transmission: "Manual",
@@ -30,12 +42,16 @@ function EditCar() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const API_ORIGIN = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_ORIGIN =
+    import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "";
 
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    if (
+      imagePath.startsWith("http://") ||
+      imagePath.startsWith("https://")
+    ) {
       return imagePath;
     }
 
@@ -58,7 +74,10 @@ function EditCar() {
         const response = await getDealerCarById(id, token);
 
         const carData =
-          response?.car || response?.data?.car || response?.data || response;
+          response?.car ||
+          response?.data?.car ||
+          response?.data ||
+          response;
 
         if (!carData) {
           throw new Error("Car details could not be found.");
@@ -70,6 +89,7 @@ function EditCar() {
           brand: carData.brand || "",
           model: carData.model || "",
           year: carData.year || "",
+          numberPlate: carData.numberPlate || "",
           pricePerDay: carData.pricePerDay || "",
           fuelType: carData.fuelType || "Petrol",
           transmission: carData.transmission || "Manual",
@@ -97,7 +117,7 @@ function EditCar() {
         setError(
           err.response?.data?.message ||
             err.message ||
-            "Unable to load car details.",
+            "Unable to load car details."
         );
       } finally {
         setLoading(false);
@@ -136,7 +156,12 @@ function EditCar() {
       return;
     }
 
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
 
     if (!allowedTypes.includes(selectedFile.type)) {
       setError("Please select a JPG, JPEG, PNG, or WEBP image.");
@@ -165,6 +190,7 @@ function EditCar() {
   const validateForm = () => {
     const brand = formData.brand.trim();
     const model = formData.model.trim();
+    const numberPlate = formData.numberPlate.trim();
     const year = Number(formData.year);
     const pricePerDay = Number(formData.pricePerDay);
     const seats = Number(formData.seats);
@@ -181,8 +207,15 @@ function EditCar() {
       return "Please enter a valid manufacturing year.";
     }
 
-    if (year < 1900 || year > new Date().getFullYear() + 1) {
+    if (
+      year < 1900 ||
+      year > new Date().getFullYear() + 1
+    ) {
       return "Please enter a valid manufacturing year.";
+    }
+
+    if (!numberPlate) {
+      return "Number plate is required.";
     }
 
     if (!formData.pricePerDay || !Number.isFinite(pricePerDay)) {
@@ -231,7 +264,17 @@ function EditCar() {
       data.append("brand", formData.brand.trim());
       data.append("model", formData.model.trim());
       data.append("year", String(Number(formData.year)));
-      data.append("pricePerDay", String(Number(formData.pricePerDay)));
+
+      data.append(
+        "numberPlate",
+        formData.numberPlate.trim().toUpperCase()
+      );
+
+      data.append(
+        "pricePerDay",
+        String(Number(formData.pricePerDay))
+      );
+
       data.append("fuelType", formData.fuelType);
       data.append("transmission", formData.transmission);
       data.append("seats", String(Number(formData.seats)));
@@ -264,7 +307,7 @@ function EditCar() {
 
       setError(
         err.response?.data?.message ||
-          "Unable to update the car. Please try again.",
+          "Unable to update the car. Please try again."
       );
     } finally {
       setSaving(false);
@@ -293,7 +336,11 @@ function EditCar() {
       <main className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
         <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
-            <Car size={26} className="text-destructive" aria-hidden="true" />
+            <Car
+              size={26}
+              className="text-destructive"
+              aria-hidden="true"
+            />
           </div>
 
           <h1 className="font-metal mt-5 text-3xl text-foreground">
@@ -330,7 +377,11 @@ function EditCar() {
 
           <div className="mt-6 flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Car size={24} className="text-primary" aria-hidden="true" />
+              <Car
+                size={24}
+                className="text-primary"
+                aria-hidden="true"
+              />
             </div>
 
             <div>
@@ -427,7 +478,7 @@ function EditCar() {
               </div>
             </div>
 
-            {/* Year + Price */}
+            {/* Year + Number Plate */}
             <div className="grid gap-5 md:grid-cols-2">
               <div>
                 <label
@@ -452,29 +503,50 @@ function EditCar() {
 
               <div>
                 <label
-                  htmlFor="pricePerDay"
+                  htmlFor="numberPlate"
                   className="font-garamond mb-2 block text-sm font-medium text-foreground"
                 >
-                  Price Per Day
+                  Number Plate
                 </label>
 
-                <div className="relative">
-                  <span className="font-garamond pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                    ₹
-                  </span>
+                <input
+                  id="numberPlate"
+                  name="numberPlate"
+                  type="text"
+                  value={formData.numberPlate}
+                  onChange={handleChange}
+                  placeholder="e.g. TS09AB1234"
+                  autoComplete="off"
+                  className="font-garamond w-full rounded-lg border border-border bg-background px-4 py-3 text-sm uppercase tracking-wider text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
 
-                  <input
-                    id="pricePerDay"
-                    name="pricePerDay"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={formData.pricePerDay}
-                    onChange={handleChange}
-                    placeholder="2500"
-                    className="font-garamond w-full rounded-lg border border-border bg-background py-3 pl-8 pr-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
+            {/* Price */}
+            <div>
+              <label
+                htmlFor="pricePerDay"
+                className="font-garamond mb-2 block text-sm font-medium text-foreground"
+              >
+                Price Per Day
+              </label>
+
+              <div className="relative">
+                <span className="font-garamond pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                  ₹
+                </span>
+
+                <input
+                  id="pricePerDay"
+                  name="pricePerDay"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={formData.pricePerDay}
+                  onChange={handleChange}
+                  placeholder="2500"
+                  className="font-garamond w-full rounded-lg border border-border bg-background py-3 pl-8 pr-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
               </div>
             </div>
 
@@ -687,7 +759,11 @@ function EditCar() {
                 </>
               ) : (
                 <>
-                  <Save size={17} className="mr-2" aria-hidden="true" />
+                  <Save
+                    size={17}
+                    className="mr-2"
+                    aria-hidden="true"
+                  />
                   Update Car
                 </>
               )}
@@ -700,3 +776,4 @@ function EditCar() {
 }
 
 export default EditCar;
+

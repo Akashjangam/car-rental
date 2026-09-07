@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -17,6 +18,7 @@ const initialForm = {
   brand: "",
   model: "",
   year: "",
+  numberPlate: "",
   pricePerDay: "",
   fuelType: "Petrol",
   transmission: "Manual",
@@ -85,6 +87,7 @@ function AddCar() {
       !formData.brand.trim() ||
       !formData.model.trim() ||
       !formData.year ||
+      !formData.numberPlate.trim() ||
       !formData.pricePerDay ||
       !formData.seats
     ) {
@@ -100,6 +103,13 @@ function AddCar() {
       data.append("brand", formData.brand.trim());
       data.append("model", formData.model.trim());
       data.append("year", formData.year);
+
+      // Number plate
+      data.append(
+        "numberPlate",
+        formData.numberPlate.trim().toUpperCase(),
+      );
+
       data.append("pricePerDay", formData.pricePerDay);
       data.append("fuelType", formData.fuelType);
       data.append("transmission", formData.transmission);
@@ -239,6 +249,16 @@ function AddCar() {
                   value={formData.year}
                   onChange={handleChange}
                   placeholder="e.g. 2024"
+                />
+
+                {/* Number Plate */}
+                <FormField
+                  id="numberPlate"
+                  name="numberPlate"
+                  label="Number Plate"
+                  value={formData.numberPlate}
+                  onChange={handleChange}
+                  placeholder="e.g. TS09AB1234"
                 />
 
                 <FormField
@@ -462,7 +482,7 @@ function FormField({
         onChange={onChange}
         placeholder={placeholder}
         required
-        className="min-h-12 w-full rounded-xl border border-input bg-background px-4 py-3 font-garamond text-base text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/20"
+        className="min-h-12 w-full rounded-xl border border-input bg-background px-4 py-3 font-garamond text-base uppercase text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/20"
       />
     </div>
   );

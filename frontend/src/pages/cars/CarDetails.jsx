@@ -69,7 +69,6 @@ function CarDetails() {
   const [reviewDeletingId, setReviewDeletingId] = useState(null);
 
   // Fetch car
-
   useEffect(() => {
     let mounted = true;
 
@@ -111,7 +110,6 @@ function CarDetails() {
   }, [id]);
 
   // Fetch reviews
-
   useEffect(() => {
     let mounted = true;
 
@@ -160,7 +158,6 @@ function CarDetails() {
   }, [id]);
 
   // Find completed booking
-
   useEffect(() => {
     let mounted = true;
 
@@ -238,7 +235,6 @@ function CarDetails() {
   }, [id, token, reviews]);
 
   // Car information
-
   const carImage = useMemo(() => {
     const image = car?.image || car?.imageUrl || car?.images?.[0] || "";
 
@@ -271,13 +267,15 @@ function CarDetails() {
 
   const location = car?.location || car?.pickupLocation || "DriveNow Location";
 
+  // NUMBER PLATE
+  const numberPlate = car?.numberPlate || "N/A";
+
   const isAvailable =
     car?.available !== false &&
     car?.isAvailable !== false &&
     car?.availability !== false;
 
   // Booking
-
   const handleBookNow = () => {
     if (!isAvailable) {
       return;
@@ -297,7 +295,6 @@ function CarDetails() {
   };
 
   // Calculate average
-
   const calculateAverage = (reviewList) => {
     if (!reviewList.length) {
       return 0;
@@ -312,7 +309,6 @@ function CarDetails() {
   };
 
   // Submit review
-
   const handleSubmitReview = async (event) => {
     event.preventDefault();
 
@@ -385,7 +381,6 @@ function CarDetails() {
   };
 
   // Check own review
-
   const isOwnReview = (review) => {
     const reviewUserId = review?.user?._id || review?.user?.id || review?.user;
 
@@ -399,7 +394,6 @@ function CarDetails() {
   };
 
   // Start editing
-
   const handleStartEdit = (review) => {
     setEditingReviewId(review._id);
 
@@ -412,7 +406,6 @@ function CarDetails() {
   };
 
   // Cancel editing
-
   const handleCancelEdit = () => {
     setEditingReviewId(null);
     setEditRating(5);
@@ -420,7 +413,6 @@ function CarDetails() {
   };
 
   // Update review
-
   const handleUpdateReview = async (reviewId) => {
     if (!token) {
       return;
@@ -479,7 +471,6 @@ function CarDetails() {
   };
 
   // Delete review
-
   const handleDeleteReview = async (reviewId) => {
     if (!token) {
       return;
@@ -527,13 +518,11 @@ function CarDetails() {
   };
 
   // Loading
-
   if (loading) {
     return <DetailsSkeleton />;
   }
 
   // Error
-
   if (error || !car) {
     return (
       <main className="min-h-screen bg-background px-5 py-12 sm:px-8 lg:px-10">
@@ -577,7 +566,6 @@ function CarDetails() {
   }
 
   // Main
-
   return (
     <main className="min-h-screen bg-background">
       {/* Back */}
@@ -708,7 +696,7 @@ function CarDetails() {
                 Vehicle details
               </h2>
 
-              <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-5">
                 <DetailItem
                   icon={<Gauge />}
                   label="Transmission"
@@ -723,6 +711,13 @@ function CarDetails() {
                   icon={<MapPin />}
                   label="Location"
                   value={location}
+                />
+
+                {/* NUMBER PLATE */}
+                <DetailItem
+                  icon={<CarIconSmall />}
+                  label="Number Plate"
+                  value={numberPlate}
                 />
               </div>
             </div>
@@ -1156,7 +1151,6 @@ function CarDetails() {
 }
 
 // Detail item
-
 function DetailItem({ icon, label, value }) {
   return (
     <div className="border-b border-border pb-4">
@@ -1183,8 +1177,27 @@ function DetailItem({ icon, label, value }) {
   );
 }
 
-// Trust item
+// Small car icon for number plate
+function CarIconSmall() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      className="h-[18px] w-[18px]"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5 17h14M6 17l1-5h10l1 5M8 12l1.5-4h5L16 12M7 17v2m10-2v2M4 14h2m12 0h2"
+      />
+    </svg>
+  );
+}
 
+// Trust item
 function TrustItem({ text }) {
   return (
     <div className="flex items-center gap-3">
@@ -1200,7 +1213,6 @@ function TrustItem({ text }) {
 }
 
 // Car icon
-
 function CarIcon() {
   return (
     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted text-primary">
@@ -1223,7 +1235,6 @@ function CarIcon() {
 }
 
 // Details skeleton
-
 function DetailsSkeleton() {
   return (
     <main className="min-h-screen bg-background">
@@ -1265,7 +1276,6 @@ function DetailsSkeleton() {
 }
 
 // Reviews skeleton
-
 function ReviewsSkeleton() {
   return (
     <div className="space-y-5" aria-hidden="true">

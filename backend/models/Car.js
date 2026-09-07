@@ -21,6 +21,14 @@ const carSchema = new mongoose.Schema(
       required: true,
     },
 
+    numberPlate: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      uppercase: true,
+    },
+
     pricePerDay: {
       type: Number,
       required: true,
@@ -30,7 +38,7 @@ const carSchema = new mongoose.Schema(
     fuelType: {
       type: String,
       required: true,
-      enum: ["Petrol", "Diesel", "Electric", "Hybrid" , "CNG"],
+      enum: ["Petrol", "Diesel", "Electric", "Hybrid", "CNG"],
     },
 
     transmission: {
@@ -45,18 +53,14 @@ const carSchema = new mongoose.Schema(
       min: 1,
     },
 
-
     // AVAILABILITY
-  
 
     available: {
       type: Boolean,
       default: true,
     },
 
-   
     // CAR IMAGE
- 
 
     image: {
       type: String,
@@ -64,15 +68,6 @@ const carSchema = new mongoose.Schema(
     },
 
     // DEALER
-
-
-    // Admin-added cars:
-    // dealer can be empty.
-
-    // Dealer-added cars:
-    // backend automatically stores the
-    // logged-in dealer's user ID.
-
 
     dealer: {
       type: mongoose.Schema.Types.ObjectId,

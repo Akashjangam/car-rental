@@ -13,6 +13,7 @@ const AdminCarsAdd = () => {
     brand: "",
     model: "",
     year: "",
+    numberPlate: "",
     pricePerDay: "",
     fuelType: "",
     transmission: "",
@@ -112,6 +113,7 @@ const AdminCarsAdd = () => {
       !formData.brand.trim() ||
       !formData.model.trim() ||
       !formData.year ||
+      !formData.numberPlate.trim() ||
       !formData.pricePerDay ||
       !formData.fuelType ||
       !formData.transmission ||
@@ -150,6 +152,10 @@ const AdminCarsAdd = () => {
       data.append("brand", formData.brand.trim());
       data.append("model", formData.model.trim());
       data.append("year", String(year));
+      data.append(
+        "numberPlate",
+        formData.numberPlate.trim().toUpperCase(),
+      );
       data.append("pricePerDay", String(price));
       data.append("fuelType", formData.fuelType);
       data.append("transmission", formData.transmission);
@@ -340,6 +346,33 @@ const AdminCarsAdd = () => {
                     required
                     disabled={loading}
                     className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+
+                {/* NUMBER PLATE */}
+
+                <div>
+                  <label
+                    htmlFor="numberPlate"
+                    className="mb-2 block text-sm font-bold text-foreground"
+                  >
+                    Number Plate{" "}
+                    <span className="text-destructive" aria-hidden="true">
+                      *
+                    </span>
+                  </label>
+
+                  <input
+                    id="numberPlate"
+                    name="numberPlate"
+                    type="text"
+                    value={formData.numberPlate}
+                    onChange={handleChange}
+                    placeholder="e.g. TS09AB1234"
+                    autoComplete="off"
+                    required
+                    disabled={loading}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm uppercase text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
 

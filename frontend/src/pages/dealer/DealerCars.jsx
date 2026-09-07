@@ -14,7 +14,8 @@ import {
 import { getDealerCars, deleteDealerCar } from "../../services/adminApi";
 import { useAuth } from "../../context/AuthContext";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const DealerCars = () => {
   const { token, loading: authLoading } = useAuth();
@@ -78,7 +79,9 @@ const DealerCars = () => {
     } catch (err) {
       console.error("Delete car error:", err);
 
-      setError(err?.response?.data?.message || "Failed to delete car.");
+      setError(
+        err?.response?.data?.message || "Failed to delete car.",
+      );
     } finally {
       setDeletingId(null);
     }
@@ -123,7 +126,10 @@ const DealerCars = () => {
           <div className="flex flex-col gap-6 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8 md:flex-row md:items-end md:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <CarFront className="h-6 w-6" aria-hidden="true" />
+                <CarFront
+                  className="h-6 w-6"
+                  aria-hidden="true"
+                />
               </div>
 
               <div>
@@ -136,8 +142,8 @@ const DealerCars = () => {
                 </h1>
 
                 <p className="mt-2 max-w-xl font-garamond text-base leading-6 text-muted-foreground">
-                  Manage the vehicles you have listed and keep your dealership
-                  inventory up to date.
+                  Manage the vehicles you have listed and keep your
+                  dealership inventory up to date.
                 </p>
               </div>
             </div>
@@ -146,7 +152,10 @@ const DealerCars = () => {
               to="/dealer/cars/add"
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-garamond text-base font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/30"
             >
-              <Plus className="h-4 w-4" aria-hidden="true" />
+              <Plus
+                className="h-4 w-4"
+                aria-hidden="true"
+              />
               Add New Car
             </Link>
           </div>
@@ -175,7 +184,10 @@ const DealerCars = () => {
               onClick={fetchCars}
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2 font-garamond text-sm font-semibold text-foreground transition hover:bg-muted focus:outline-none focus:ring-4 focus:ring-primary/20"
             >
-              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              <RefreshCw
+                className="h-4 w-4"
+                aria-hidden="true"
+              />
               Try Again
             </button>
           </div>
@@ -196,7 +208,8 @@ const DealerCars = () => {
                 </p>
 
                 <h2 className="font-metal text-2xl tracking-wide text-foreground">
-                  {cars.length} {cars.length === 1 ? "Vehicle" : "Vehicles"}
+                  {cars.length}{" "}
+                  {cars.length === 1 ? "Vehicle" : "Vehicles"}
                 </h2>
               </div>
             </div>
@@ -204,7 +217,7 @@ const DealerCars = () => {
             {/* Desktop Table */}
             <div className="hidden overflow-hidden rounded-3xl border border-border bg-card shadow-sm md:block">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[850px]">
+                <table className="w-full min-w-[1050px]">
                   <caption className="sr-only">
                     Cars listed by the dealer
                   </caption>
@@ -214,6 +227,7 @@ const DealerCars = () => {
                       {[
                         "Vehicle",
                         "Year",
+                        "Number Plate",
                         "Price / Day",
                         "Fuel",
                         "Transmission",
@@ -279,8 +293,18 @@ const DealerCars = () => {
                             {car.year}
                           </td>
 
+                          {/* Number Plate */}
+                          <td className="px-6 py-5">
+                            <span className="inline-flex rounded-lg border border-border bg-muted/30 px-3 py-2 font-garamond text-sm font-bold uppercase tracking-wider text-foreground">
+                              {car.numberPlate || "N/A"}
+                            </span>
+                          </td>
+
                           <td className="px-6 py-5 font-garamond text-base font-bold text-foreground">
-                            ₹{Number(car.pricePerDay).toLocaleString("en-IN")}
+                            ₹
+                            {Number(car.pricePerDay).toLocaleString(
+                              "en-IN",
+                            )}
                           </td>
 
                           <td className="px-6 py-5 font-garamond text-sm text-muted-foreground">
@@ -292,7 +316,9 @@ const DealerCars = () => {
                           </td>
 
                           <td className="px-6 py-5">
-                            <StatusBadge available={car.available} />
+                            <StatusBadge
+                              available={car.available}
+                            />
                           </td>
 
                           <td className="px-6 py-5">
@@ -310,8 +336,12 @@ const DealerCars = () => {
 
                               <button
                                 type="button"
-                                onClick={() => handleDelete(car._id)}
-                                disabled={deletingId === car._id}
+                                onClick={() =>
+                                  handleDelete(car._id)
+                                }
+                                disabled={
+                                  deletingId === car._id
+                                }
                                 aria-label={`Delete ${car.brand} ${car.model}`}
                                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-destructive/30 text-destructive transition hover:bg-destructive/10 focus:outline-none focus:ring-4 focus:ring-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
@@ -355,7 +385,10 @@ const DealerCars = () => {
                       />
                     ) : (
                       <div className="flex h-56 items-center justify-center bg-muted text-muted-foreground">
-                        <CarFront className="h-12 w-12" aria-hidden="true" />
+                        <CarFront
+                          className="h-12 w-12"
+                          aria-hidden="true"
+                        />
                       </div>
                     )}
 
@@ -369,27 +402,42 @@ const DealerCars = () => {
                           <p className="mt-1 font-garamond text-base text-muted-foreground">
                             {car.year} • {car.seats} seats
                           </p>
+
+                          {/* Number Plate */}
+                          <div className="mt-3">
+                            <span className="inline-flex rounded-lg border border-border bg-muted/30 px-3 py-1.5 font-garamond text-sm font-bold uppercase tracking-wider text-foreground">
+                              {car.numberPlate || "N/A"}
+                            </span>
+                          </div>
                         </div>
 
-                        <StatusBadge available={car.available} />
+                        <StatusBadge
+                          available={car.available}
+                        />
                       </div>
 
                       <div className="mt-5 grid grid-cols-2 gap-3">
                         <InfoCard
                           label="Price / Day"
-                          value={`₹${Number(car.pricePerDay).toLocaleString(
-                            "en-IN",
-                          )}`}
+                          value={`₹${Number(
+                            car.pricePerDay,
+                          ).toLocaleString("en-IN")}`}
                         />
 
-                        <InfoCard label="Fuel" value={car.fuelType} />
+                        <InfoCard
+                          label="Fuel"
+                          value={car.fuelType}
+                        />
 
                         <InfoCard
                           label="Transmission"
                           value={car.transmission}
                         />
 
-                        <InfoCard label="Seats" value={car.seats} />
+                        <InfoCard
+                          label="Seats"
+                          value={car.seats}
+                        />
                       </div>
 
                       <div className="mt-5 flex gap-3">
@@ -397,14 +445,21 @@ const DealerCars = () => {
                           to={`/dealer/cars/edit/${car._id}`}
                           className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 font-garamond text-base font-semibold text-foreground transition hover:bg-muted focus:outline-none focus:ring-4 focus:ring-primary/20"
                         >
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
+                          <Pencil
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
                           Edit
                         </Link>
 
                         <button
                           type="button"
-                          onClick={() => handleDelete(car._id)}
-                          disabled={deletingId === car._id}
+                          onClick={() =>
+                            handleDelete(car._id)
+                          }
+                          disabled={
+                            deletingId === car._id
+                          }
                           className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-destructive/30 px-4 py-3 font-garamond text-base font-semibold text-destructive transition hover:bg-destructive/10 focus:outline-none focus:ring-4 focus:ring-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {deletingId === car._id ? (
@@ -413,7 +468,10 @@ const DealerCars = () => {
                               aria-hidden="true"
                             />
                           ) : (
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            <Trash2
+                              className="h-4 w-4"
+                              aria-hidden="true"
+                            />
                           )}
                           Delete
                         </button>
@@ -424,7 +482,10 @@ const DealerCars = () => {
                         className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-garamond text-base font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/30"
                       >
                         View Car
-                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                        <ArrowRight
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        />
                       </Link>
                     </div>
                   </article>
@@ -498,7 +559,10 @@ function EmptyState() {
   return (
     <section className="rounded-3xl border border-border bg-card px-6 py-16 text-center shadow-sm sm:px-10">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-        <CarFront className="h-8 w-8" aria-hidden="true" />
+        <CarFront
+          className="h-8 w-8"
+          aria-hidden="true"
+        />
       </div>
 
       <p className="mt-6 font-garamond text-sm font-semibold uppercase tracking-[0.16em] text-primary">
@@ -510,14 +574,18 @@ function EmptyState() {
       </h2>
 
       <p className="mx-auto mt-3 max-w-md font-garamond text-base leading-7 text-muted-foreground">
-        Add your first vehicle to start offering cars through DriveNow.
+        Add your first vehicle to start offering cars through
+        DriveNow.
       </p>
 
       <Link
         to="/dealer/cars/add"
         className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-garamond text-base font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/30"
       >
-        <Plus className="h-4 w-4" aria-hidden="true" />
+        <Plus
+          className="h-4 w-4"
+          aria-hidden="true"
+        />
         Add Your First Car
       </Link>
     </section>

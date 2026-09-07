@@ -13,12 +13,14 @@ import {
 import { getCarById, updateCar } from "../../services/carApi";
 import { useAuth } from "../../context/AuthContext";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const initialForm = {
   brand: "",
   model: "",
   year: "",
+  numberPlate: "",
   pricePerDay: "",
   fuelType: "Petrol",
   transmission: "Manual",
@@ -62,7 +64,10 @@ function AdminCarsEdit() {
         const response = await getCarById(id);
 
         const car =
-          response?.car || response?.data?.car || response?.data || response;
+          response?.car ||
+          response?.data?.car ||
+          response?.data ||
+          response;
 
         if (!car || !car._id) {
           throw new Error("Car not found.");
@@ -72,6 +77,7 @@ function AdminCarsEdit() {
           brand: car.brand || "",
           model: car.model || "",
           year: car.year || "",
+          numberPlate: car.numberPlate || "",
           pricePerDay: car.pricePerDay || "",
           fuelType: car.fuelType || "Petrol",
           transmission: car.transmission || "Manual",
@@ -84,7 +90,9 @@ function AdminCarsEdit() {
         console.error("Load car error:", err);
 
         setError(
-          err?.response?.data?.message || err?.message || "Failed to load car.",
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load car.",
         );
       } finally {
         setLoading(false);
@@ -140,7 +148,12 @@ function AdminCarsEdit() {
       return;
     }
 
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
 
     if (!allowedTypes.includes(selectedFile.type)) {
       setError("Only JPG, JPEG, PNG and WEBP images are allowed.");
@@ -170,11 +183,16 @@ function AdminCarsEdit() {
       return "";
     }
 
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    if (
+      imagePath.startsWith("http://") ||
+      imagePath.startsWith("https://")
+    ) {
       return imagePath;
     }
 
-    return `${API_BASE_URL}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
+    return `${API_BASE_URL}${
+      imagePath.startsWith("/") ? "" : "/"
+    }${imagePath}`;
   };
 
   // =========================================================
@@ -204,6 +222,11 @@ function AdminCarsEdit() {
 
     if (!formData.year) {
       setError("Year is required.");
+      return;
+    }
+
+    if (!formData.numberPlate.trim()) {
+      setError("Number plate is required.");
       return;
     }
 
@@ -256,11 +279,21 @@ function AdminCarsEdit() {
       data.append("brand", formData.brand.trim());
       data.append("model", formData.model.trim());
       data.append("year", String(year));
+
+      // Number Plate
+      data.append(
+        "numberPlate",
+        formData.numberPlate.trim().toUpperCase(),
+      );
+
       data.append("pricePerDay", String(price));
       data.append("fuelType", formData.fuelType);
       data.append("transmission", formData.transmission);
       data.append("seats", String(seats));
-      data.append("available", formData.available ? "true" : "false");
+      data.append(
+        "available",
+        formData.available ? "true" : "false",
+      );
 
       // Dealer is intentionally not sent.
       // Backend preserves the existing dealer.
@@ -280,7 +313,9 @@ function AdminCarsEdit() {
       console.error("Update car error:", err);
 
       setError(
-        err?.response?.data?.message || err?.message || "Failed to update car.",
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update car.",
       );
     } finally {
       setSaving(false);
@@ -319,6 +354,7 @@ function AdminCarsEdit() {
   return (
     <main className="min-h-screen bg-background px-4 py-8 font-garamond sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
+
         {/* HEADER */}
 
         <header className="mb-8">
@@ -326,14 +362,21 @@ function AdminCarsEdit() {
             to="/admin/cars"
             className="mb-5 inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <ArrowLeft
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
+
             Back to Cars
           </Link>
 
           <div className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-7">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Car className="h-7 w-7" aria-hidden="true" />
+                <Car
+                  className="h-7 w-7"
+                  aria-hidden="true"
+                />
               </div>
 
               <div>
@@ -371,7 +414,10 @@ function AdminCarsEdit() {
             aria-live="polite"
             className="mb-6 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-semibold text-primary"
           >
-            <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <CheckCircle2
+              className="h-5 w-5 shrink-0"
+              aria-hidden="true"
+            />
 
             <span>{success}</span>
           </div>
@@ -381,6 +427,7 @@ function AdminCarsEdit() {
 
         <form onSubmit={handleSubmit}>
           <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+
             {/* BASIC DETAILS */}
 
             <section className="border-b border-border p-5 sm:p-7">
@@ -397,6 +444,7 @@ function AdminCarsEdit() {
               </p>
 
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
+
                 {/* BRAND */}
 
                 <div>
@@ -405,7 +453,10 @@ function AdminCarsEdit() {
                     className="mb-2 block text-sm font-bold text-foreground"
                   >
                     Brand{" "}
-                    <span className="text-destructive" aria-hidden="true">
+                    <span
+                      className="text-destructive"
+                      aria-hidden="true"
+                    >
                       *
                     </span>
                   </label>
@@ -431,7 +482,10 @@ function AdminCarsEdit() {
                     className="mb-2 block text-sm font-bold text-foreground"
                   >
                     Model{" "}
-                    <span className="text-destructive" aria-hidden="true">
+                    <span
+                      className="text-destructive"
+                      aria-hidden="true"
+                    >
                       *
                     </span>
                   </label>
@@ -457,7 +511,10 @@ function AdminCarsEdit() {
                     className="mb-2 block text-sm font-bold text-foreground"
                   >
                     Year{" "}
-                    <span className="text-destructive" aria-hidden="true">
+                    <span
+                      className="text-destructive"
+                      aria-hidden="true"
+                    >
                       *
                     </span>
                   </label>
@@ -477,6 +534,36 @@ function AdminCarsEdit() {
                   />
                 </div>
 
+                {/* NUMBER PLATE */}
+
+                <div>
+                  <label
+                    htmlFor="numberPlate"
+                    className="mb-2 block text-sm font-bold text-foreground"
+                  >
+                    Number Plate{" "}
+                    <span
+                      className="text-destructive"
+                      aria-hidden="true"
+                    >
+                      *
+                    </span>
+                  </label>
+
+                  <input
+                    id="numberPlate"
+                    name="numberPlate"
+                    type="text"
+                    value={formData.numberPlate}
+                    onChange={handleChange}
+                    placeholder="e.g. TS09AB1234"
+                    autoComplete="off"
+                    required
+                    disabled={saving}
+                    className="min-h-12 w-full rounded-xl border border-input bg-background px-4 text-sm uppercase text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+
                 {/* PRICE */}
 
                 <div>
@@ -485,7 +572,10 @@ function AdminCarsEdit() {
                     className="mb-2 block text-sm font-bold text-foreground"
                   >
                     Price Per Day (₹){" "}
-                    <span className="text-destructive" aria-hidden="true">
+                    <span
+                      className="text-destructive"
+                      aria-hidden="true"
+                    >
                       *
                     </span>
                   </label>
@@ -519,6 +609,7 @@ function AdminCarsEdit() {
               </h2>
 
               <div className="mt-6 grid gap-5 sm:grid-cols-3">
+
                 {/* FUEL */}
 
                 <div>
@@ -576,7 +667,10 @@ function AdminCarsEdit() {
                     className="mb-2 block text-sm font-bold text-foreground"
                   >
                     Seats{" "}
-                    <span className="text-destructive" aria-hidden="true">
+                    <span
+                      className="text-destructive"
+                      aria-hidden="true"
+                    >
                       *
                     </span>
                   </label>
@@ -647,6 +741,7 @@ function AdminCarsEdit() {
               </p>
 
               <div className="mt-6 grid gap-6 md:grid-cols-[260px_1fr]">
+
                 {/* CURRENT IMAGE */}
 
                 <div className="overflow-hidden rounded-2xl border border-border bg-muted">
@@ -662,14 +757,20 @@ function AdminCarsEdit() {
                       alt={`${formData.brand} ${formData.model}`}
                       className="h-52 w-full object-cover"
                       onError={(event) => {
-                        event.currentTarget.src = "/car-placeholder.jpg";
+                        event.currentTarget.src =
+                          "/car-placeholder.jpg";
                       }}
                     />
                   ) : (
                     <div className="flex h-52 flex-col items-center justify-center gap-2 text-muted-foreground">
-                      <ImageIcon className="h-9 w-9" aria-hidden="true" />
+                      <ImageIcon
+                        className="h-9 w-9"
+                        aria-hidden="true"
+                      />
 
-                      <span className="text-sm">No image available</span>
+                      <span className="text-sm">
+                        No image available
+                      </span>
                     </div>
                   )}
                 </div>
@@ -682,7 +783,10 @@ function AdminCarsEdit() {
                     className="flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/30 px-6 py-8 text-center transition hover:border-primary hover:bg-primary/5 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10"
                   >
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Upload className="h-6 w-6" aria-hidden="true" />
+                      <Upload
+                        className="h-6 w-6"
+                        aria-hidden="true"
+                      />
                     </div>
 
                     <span className="mt-4 text-base font-bold text-foreground">
@@ -734,11 +838,16 @@ function AdminCarsEdit() {
                       className="h-4 w-4 animate-spin"
                       aria-hidden="true"
                     />
+
                     Updating...
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4" aria-hidden="true" />
+                    <Save
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
+
                     Update Car
                   </>
                 )}

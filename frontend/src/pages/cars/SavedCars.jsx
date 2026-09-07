@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Heart, ArrowLeft, CarFront } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -124,7 +125,10 @@ const SavedCars = () => {
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                          <CarFront className="h-12 w-12" aria-hidden="true" />
+                          <CarFront
+                            className="h-12 w-12"
+                            aria-hidden="true"
+                          />
                         </div>
                       )}
 
@@ -133,7 +137,9 @@ const SavedCars = () => {
                         type="button"
                         onClick={() => removeSavedCar(car._id)}
                         className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-background/90 text-primary shadow-sm backdrop-blur-sm transition hover:scale-105 hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                        aria-label={`Remove ${car.brand || ""} ${car.model || "car"} from saved cars`}
+                        aria-label={`Remove ${car.brand || ""} ${
+                          car.model || "car"
+                        } from saved cars`}
                         title="Remove from saved cars"
                       >
                         <Heart
@@ -156,6 +162,15 @@ const SavedCars = () => {
                             <p className="mt-1 font-garamond text-sm text-muted-foreground">
                               {car.year}
                             </p>
+                          )}
+
+                          {/* Number Plate */}
+                          {car.numberPlate && (
+                            <div className="mt-2">
+                              <span className="inline-flex rounded-lg border border-border bg-muted/30 px-3 py-1.5 font-garamond text-xs font-semibold uppercase tracking-wider text-foreground">
+                                {car.numberPlate}
+                              </span>
+                            </div>
                           )}
                         </div>
 
@@ -210,3 +225,4 @@ const SavedCars = () => {
 };
 
 export default SavedCars;
+

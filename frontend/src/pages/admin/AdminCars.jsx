@@ -12,7 +12,6 @@ import {
   Gauge,
   ArrowLeft,
 } from "lucide-react";
-
 import { getCars, deleteCar } from "../../services/carApi";
 import { useAuth } from "../../context/AuthContext";
 
@@ -280,7 +279,7 @@ const AdminCars = () => {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1000px]">
+                <table className="w-full min-w-[1100px]">
                   <caption className="sr-only">
                     DriveNow admin car management table
                   </caption>
@@ -299,6 +298,15 @@ const AdminCars = () => {
                         className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"
                       >
                         Year
+                      </th>
+
+                      {/* Number Plate */}
+
+                      <th
+                        scope="col"
+                        className="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"
+                      >
+                        Number Plate
                       </th>
 
                       <th
@@ -374,6 +382,14 @@ const AdminCars = () => {
 
                         <td className="px-5 py-5 text-sm font-semibold text-foreground">
                           {car.year || "N/A"}
+                        </td>
+
+                        {/* Number Plate */}
+
+                        <td className="px-5 py-5">
+                          <span className="inline-flex rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm font-bold uppercase tracking-wider text-foreground">
+                            {car.numberPlate || "N/A"}
+                          </span>
                         </td>
 
                         {/* Price */}
@@ -518,6 +534,14 @@ const AdminCars = () => {
 
                         <p className="text-xs text-muted-foreground">/ day</p>
                       </div>
+                    </div>
+
+                    {/* Number Plate */}
+
+                    <div className="mt-4">
+                      <span className="inline-flex rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm font-bold uppercase tracking-wider text-foreground">
+                        {car.numberPlate || "N/A"}
+                      </span>
                     </div>
 
                     {/* Specs */}
