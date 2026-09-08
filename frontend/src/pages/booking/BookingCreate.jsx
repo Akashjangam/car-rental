@@ -15,7 +15,9 @@ import { getCarById } from "../../services/carApi";
 import { createBooking } from "../../services/bookingApi";
 import { useAuth } from "../../context/AuthContext";
 
-const API_ORIGIN = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_ORIGIN = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 /* ======================================================
    HELPERS
@@ -68,13 +70,10 @@ function BookingCreate() {
   const { token, user } = useAuth();
 
   const [car, setCar] = useState(null);
-
   const [startDateTime, setStartDateTime] = useState("");
   const [endDateTime, setEndDateTime] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -99,7 +98,10 @@ function BookingCreate() {
         const response = await getCarById(carId);
 
         const carData =
-          response?.car || response?.data?.car || response?.data || response;
+          response?.car ||
+          response?.data?.car ||
+          response?.data ||
+          response;
 
         if (!carData) {
           throw new Error("Car not found.");
@@ -201,7 +203,8 @@ function BookingCreate() {
   ====================================================== */
 
   const carImage = useMemo(() => {
-    const image = car?.image || car?.imageUrl || car?.images?.[0] || "";
+    const image =
+      car?.image || car?.imageUrl || car?.images?.[0] || "";
 
     if (!image) {
       return "";
@@ -318,7 +321,7 @@ function BookingCreate() {
 
     /* --------------------------------------------------
        CREATE BOOKING
-       
+
        Backend performs the final overlap check.
     -------------------------------------------------- */
 
@@ -347,7 +350,9 @@ function BookingCreate() {
         response?.data?.bookingId;
 
       if (!bookingId) {
-        throw new Error("Booking was created, but no booking ID was returned.");
+        throw new Error(
+          "Booking was created, but no booking ID was returned.",
+        );
       }
 
       setSuccess("Booking created successfully.");
@@ -554,7 +559,9 @@ function BookingCreate() {
                 >
                   <span
                     className={`h-2 w-2 rounded-full ${
-                      car?.available ? "bg-success" : "bg-muted-foreground"
+                      car?.available
+                        ? "bg-success"
+                        : "bg-muted-foreground"
                     }`}
                     aria-hidden="true"
                   />
@@ -580,6 +587,19 @@ function BookingCreate() {
                       Model year {car.year}
                     </p>
                   )}
+
+                  {/* ==================================================
+                      NUMBER PLATE
+                  ================================================== */}
+
+                  {car?.numberPlate && (
+                    <p className="mt-2 font-garamond text-base font-semibold text-muted-foreground">
+                      Number Plate:{" "}
+                      <span className="text-foreground">
+                        {car.numberPlate}
+                      </span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="sm:text-right">
@@ -594,7 +614,10 @@ function BookingCreate() {
               </div>
 
               <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <CarInfo label="Fuel" value={car?.fuelType || "—"} />
+                <CarInfo
+                  label="Fuel"
+                  value={car?.fuelType || "—"}
+                />
 
                 <CarInfo
                   label="Transmission"
@@ -634,7 +657,10 @@ function BookingCreate() {
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-7">
             <div className="flex items-start gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <CalendarDays className="h-5 w-5" aria-hidden="true" />
+                <CalendarDays
+                  className="h-5 w-5"
+                  aria-hidden="true"
+                />
               </div>
 
               <div>
@@ -777,7 +803,9 @@ function BookingCreate() {
 
                   <SummaryRow
                     label="Rental days"
-                    value={`${rentalDays} ${rentalDays === 1 ? "day" : "days"}`}
+                    value={`${rentalDays} ${
+                      rentalDays === 1 ? "day" : "days"
+                    }`}
                   />
 
                   <div className="border-t border-border pt-4">
@@ -810,8 +838,8 @@ function BookingCreate() {
                   </p>
 
                   <p className="mt-1 font-garamond text-sm leading-6 text-muted-foreground">
-                    Availability is checked before the booking is created. After
-                    a successful booking, you’ll continue to payment.
+                    Availability is checked before the booking is created.
+                    After a successful booking, you’ll continue to payment.
                   </p>
                 </div>
               </div>
@@ -841,7 +869,10 @@ function BookingCreate() {
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                    <CheckCircle2
+                      className="h-5 w-5"
+                      aria-hidden="true"
+                    />
                     Confirm Booking
                   </>
                 )}
@@ -867,7 +898,9 @@ function BookingCreate() {
 function CarInfo({ label, value }) {
   return (
     <div className="rounded-xl border border-border bg-muted/40 p-4">
-      <p className="font-garamond text-sm text-muted-foreground">{label}</p>
+      <p className="font-garamond text-sm text-muted-foreground">
+        {label}
+      </p>
 
       <p className="mt-1 truncate font-garamond text-base font-bold text-foreground">
         {value}

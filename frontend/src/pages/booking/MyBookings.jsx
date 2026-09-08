@@ -13,7 +13,10 @@ import {
   Eye,
 } from "lucide-react";
 
-import { getMyBookings, cancelBooking } from "../../services/bookingApi";
+import {
+  getMyBookings,
+  cancelBooking,
+} from "../../services/bookingApi";
 import { useAuth } from "../../context/AuthContext";
 
 function MyBookings() {
@@ -49,7 +52,9 @@ function MyBookings() {
         response?.data ||
         response;
 
-      setBookings(Array.isArray(bookingData) ? bookingData : []);
+      setBookings(
+        Array.isArray(bookingData) ? bookingData : [],
+      );
     } catch (err) {
       console.error("Load bookings error:", err);
 
@@ -73,7 +78,10 @@ function MyBookings() {
   };
 
   const getCar = (booking) =>
-    booking?.car || booking?.vehicle || booking?.carDetails || null;
+    booking?.car ||
+    booking?.vehicle ||
+    booking?.carDetails ||
+    null;
 
   const getStartDate = (booking) =>
     booking?.startDate ||
@@ -135,7 +143,9 @@ function MyBookings() {
   };
 
   const getStatusConfig = (status) => {
-    const normalized = String(status || "pending").toLowerCase();
+    const normalized = String(
+      status || "pending",
+    ).toLowerCase();
 
     switch (normalized) {
       case "confirmed":
@@ -174,7 +184,9 @@ function MyBookings() {
   };
 
   const getPaymentConfig = (status) => {
-    const normalized = String(status || "unpaid").toLowerCase();
+    const normalized = String(
+      status || "unpaid",
+    ).toLowerCase();
 
     if (
       normalized === "paid" ||
@@ -245,7 +257,11 @@ function MyBookings() {
   if (loading) {
     return (
       <main className="flex min-h-[70vh] items-center justify-center bg-background px-4">
-        <div className="text-center" role="status" aria-live="polite">
+        <div
+          className="text-center"
+          role="status"
+          aria-live="polite"
+        >
           <Loader2
             className="mx-auto h-9 w-9 animate-spin text-primary"
             aria-hidden="true"
@@ -288,6 +304,7 @@ function MyBookings() {
               className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 font-garamond text-sm font-bold text-primary-foreground transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/30"
             >
               Login
+
               <ArrowRight
                 className="h-4 w-4"
                 aria-hidden="true"
@@ -303,6 +320,7 @@ function MyBookings() {
     <main className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
+
         <header className="mb-9">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -334,7 +352,9 @@ function MyBookings() {
                   aria-hidden="true"
                 />
 
-                {refreshing ? "Refreshing..." : "Refresh"}
+                {refreshing
+                  ? "Refreshing..."
+                  : "Refresh"}
               </button>
 
               <Link
@@ -355,6 +375,7 @@ function MyBookings() {
         </header>
 
         {/* Error */}
+
         {error && (
           <div
             role="alert"
@@ -387,6 +408,7 @@ function MyBookings() {
         )}
 
         {/* Empty State */}
+
         {!error && bookings.length === 0 && (
           <section className="rounded-3xl border border-border bg-card px-6 py-16 text-center shadow-sm sm:px-10">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -424,6 +446,7 @@ function MyBookings() {
         )}
 
         {/* Desktop */}
+
         {bookings.length > 0 && (
           <section
             aria-label="Your bookings"
@@ -459,6 +482,10 @@ function MyBookings() {
                     </th>
 
                     <th className="px-6 py-4 text-left font-garamond text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                      Number Plate
+                    </th>
+
+                    <th className="px-6 py-4 text-left font-garamond text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
                       Dates
                     </th>
 
@@ -484,28 +511,35 @@ function MyBookings() {
                   {bookings.map((booking) => {
                     const car = getCar(booking);
 
-                    const bookingStatus = getStatusConfig(
-                      booking?.status,
-                    );
+                    const bookingStatus =
+                      getStatusConfig(
+                        booking?.status,
+                      );
 
-                    const paymentStatus = getPaymentConfig(
-                      getPaymentStatus(booking),
-                    );
+                    const paymentStatus =
+                      getPaymentConfig(
+                        getPaymentStatus(booking),
+                      );
 
-                    const StatusIcon = bookingStatus.icon;
+                    const StatusIcon =
+                      bookingStatus.icon;
 
-                    const bookingId = getBookingId(booking);
+                    const bookingId =
+                      getBookingId(booking);
 
-                    const amount = getAmount(booking);
+                    const amount =
+                      getAmount(booking);
 
                     const isPaid =
                       paymentStatus.label === "Paid";
 
                     const isCancelled =
-                      bookingStatus.label === "Cancelled";
+                      bookingStatus.label ===
+                      "Cancelled";
 
                     const isCompleted =
-                      bookingStatus.label === "Completed";
+                      bookingStatus.label ===
+                      "Completed";
 
                     return (
                       <tr
@@ -513,33 +547,57 @@ function MyBookings() {
                         className="border-b border-border last:border-b-0 hover:bg-muted/40"
                       >
                         {/* Car */}
+
                         <td className="px-6 py-5">
                           <p className="font-garamond text-base font-bold text-foreground">
-                            {car?.brand || "DriveNow"}
+                            {car?.brand ||
+                              "DriveNow"}
                           </p>
 
                           <p className="mt-0.5 font-garamond text-sm text-muted-foreground">
-                            {car?.model || "Rental Car"}
+                            {car?.model ||
+                              "Rental Car"}
+                          </p>
+                        </td>
+
+                        {/* Number Plate */}
+
+                        <td className="px-6 py-5">
+                          <p
+                            className="font-garamond text-sm font-bold text-foreground"
+                            title={
+                              car?.numberPlate ||
+                              "—"
+                            }
+                          >
+                            {car?.numberPlate ||
+                              "—"}
                           </p>
                         </td>
 
                         {/* Dates */}
+
                         <td className="px-6 py-5">
                           <p className="font-garamond text-sm font-semibold text-foreground">
                             {formatDate(
-                              getStartDate(booking),
+                              getStartDate(
+                                booking,
+                              ),
                             )}
                           </p>
 
                           <p className="mt-1 font-garamond text-xs text-muted-foreground">
                             to{" "}
                             {formatDate(
-                              getEndDate(booking),
+                              getEndDate(
+                                booking,
+                              ),
                             )}
                           </p>
                         </td>
 
                         {/* Amount */}
+
                         <td className="px-6 py-5">
                           <p className="font-garamond text-base font-bold text-foreground">
                             {formatPrice(amount)}
@@ -547,6 +605,7 @@ function MyBookings() {
                         </td>
 
                         {/* Booking Status */}
+
                         <td className="px-6 py-5">
                           <span
                             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-garamond text-xs font-bold ${bookingStatus.className}`}
@@ -561,6 +620,7 @@ function MyBookings() {
                         </td>
 
                         {/* Payment */}
+
                         <td className="px-6 py-5">
                           <span
                             className={`inline-flex items-center rounded-full border px-3 py-1.5 font-garamond text-xs font-bold ${paymentStatus.className}`}
@@ -570,6 +630,7 @@ function MyBookings() {
                         </td>
 
                         {/* Actions */}
+
                         <td className="px-6 py-5">
                           <div className="flex flex-wrap items-center justify-end gap-2">
                             {!isPaid &&
@@ -643,6 +704,7 @@ function MyBookings() {
         )}
 
         {/* Mobile / Tablet */}
+
         {bookings.length > 0 && (
           <section
             aria-label="Your bookings"
@@ -667,28 +729,35 @@ function MyBookings() {
             {bookings.map((booking) => {
               const car = getCar(booking);
 
-              const bookingStatus = getStatusConfig(
-                booking?.status,
-              );
+              const bookingStatus =
+                getStatusConfig(
+                  booking?.status,
+                );
 
-              const paymentStatus = getPaymentConfig(
-                getPaymentStatus(booking),
-              );
+              const paymentStatus =
+                getPaymentConfig(
+                  getPaymentStatus(booking),
+                );
 
-              const StatusIcon = bookingStatus.icon;
+              const StatusIcon =
+                bookingStatus.icon;
 
-              const bookingId = getBookingId(booking);
+              const bookingId =
+                getBookingId(booking);
 
-              const amount = getAmount(booking);
+              const amount =
+                getAmount(booking);
 
               const isPaid =
                 paymentStatus.label === "Paid";
 
               const isCancelled =
-                bookingStatus.label === "Cancelled";
+                bookingStatus.label ===
+                "Cancelled";
 
               const isCompleted =
-                bookingStatus.label === "Completed";
+                bookingStatus.label ===
+                "Completed";
 
               return (
                 <article
@@ -696,16 +765,29 @@ function MyBookings() {
                   className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
                 >
                   {/* Card Header */}
+
                   <div className="border-b border-border p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="font-garamond text-sm text-muted-foreground">
-                          {car?.brand || "DriveNow"}
+                          {car?.brand ||
+                            "DriveNow"}
                         </p>
 
                         <h3 className="mt-1 truncate font-metal text-2xl text-foreground">
-                          {car?.model || "Rental Car"}
+                          {car?.model ||
+                            "Rental Car"}
                         </h3>
+
+                        {/* Number Plate */}
+
+                        <p className="mt-2 font-garamond text-sm font-bold text-foreground">
+                          Number Plate:{" "}
+                          <span className="text-primary">
+                            {car?.numberPlate ||
+                              "—"}
+                          </span>
+                        </p>
                       </div>
 
                       <span
@@ -722,19 +804,24 @@ function MyBookings() {
                   </div>
 
                   {/* Card Body */}
+
                   <div className="space-y-5 p-5">
                     <div className="grid grid-cols-2 gap-3">
                       <InfoBox
                         label="Pickup"
                         value={formatDate(
-                          getStartDate(booking),
+                          getStartDate(
+                            booking,
+                          ),
                         )}
                       />
 
                       <InfoBox
                         label="Return"
                         value={formatDate(
-                          getEndDate(booking),
+                          getEndDate(
+                            booking,
+                          ),
                         )}
                       />
                     </div>
@@ -747,7 +834,9 @@ function MyBookings() {
                           </p>
 
                           <p className="mt-1 font-metal text-2xl text-foreground">
-                            {formatPrice(amount)}
+                            {formatPrice(
+                              amount,
+                            )}
                           </p>
                         </div>
 
@@ -760,6 +849,7 @@ function MyBookings() {
                     </div>
 
                     {/* Actions */}
+
                     <div className="flex flex-col gap-3 sm:flex-row">
                       {!isPaid &&
                       !isCancelled &&

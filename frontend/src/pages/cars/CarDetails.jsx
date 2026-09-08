@@ -28,7 +28,9 @@ import {
 import { getMyBookings } from "../../services/bookingApi";
 import { useAuth } from "../../context/AuthContext";
 
-const API_ORIGIN = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_ORIGIN = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 function CarDetails() {
   const { id } = useParams();
@@ -396,9 +398,7 @@ function CarDetails() {
   // Start editing
   const handleStartEdit = (review) => {
     setEditingReviewId(review._id);
-
     setEditRating(Number(review?.rating) || 5);
-
     setEditComment(review?.comment || "");
 
     setReviewError("");
