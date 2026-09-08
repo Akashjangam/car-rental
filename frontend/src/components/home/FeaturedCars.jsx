@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Fuel, Gauge, Star, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Fuel,
+  Gauge,
+  Star,
+  Users,
+} from "lucide-react";
 
 import { getCars } from "../../services/carApi";
 import { getCarReviews } from "../../services/reviewApi";
@@ -48,7 +55,9 @@ function FeaturedCars() {
 
         // Show available cars first.
         // Backend currently returns the complete car list.
-        const availableCars = allCars.filter((car) => car?.available !== false);
+        const availableCars = allCars.filter(
+          (car) => car?.available !== false,
+        );
 
         setCars(availableCars);
 
@@ -69,8 +78,10 @@ function FeaturedCars() {
 
               return {
                 carId: String(carId),
-                averageRating: Number(reviewResponse?.averageRating) || 0,
-                totalReviews: Number(reviewResponse?.totalReviews) || 0,
+                averageRating:
+                  Number(reviewResponse?.averageRating) || 0,
+                totalReviews:
+                  Number(reviewResponse?.totalReviews) || 0,
               };
             } catch (reviewError) {
               console.error(
@@ -108,7 +119,8 @@ function FeaturedCars() {
 
         if (mounted) {
           setError(
-            err?.response?.data?.message || "Unable to load featured cars.",
+            err?.response?.data?.message ||
+              "Unable to load featured cars.",
           );
         }
       } finally {
@@ -167,12 +179,17 @@ function FeaturedCars() {
     }
 
     // Cloudinary / external image
-    if (image.startsWith("http://") || image.startsWith("https://")) {
+    if (
+      image.startsWith("http://") ||
+      image.startsWith("https://")
+    ) {
       return image;
     }
 
     // Local backend image
-    return `${API_URL}${image.startsWith("/") ? image : `/${image}`}`;
+    return `${API_URL}${
+      image.startsWith("/") ? image : `/${image}`
+    }`;
   };
 
   // ============================================================
@@ -199,9 +216,12 @@ function FeaturedCars() {
 
     const visibleCount = Math.min(3, cars.length);
 
-    return Array.from({ length: visibleCount }, (_, offset) => {
-      return cars[(currentIndex + offset) % cars.length];
-    });
+    return Array.from(
+      { length: visibleCount },
+      (_, offset) => {
+        return cars[(currentIndex + offset) % cars.length];
+      },
+    );
   }, [cars, currentIndex]);
 
   // ============================================================
@@ -253,7 +273,10 @@ function FeaturedCars() {
         <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <div className="mb-3 flex items-center gap-3">
-              <span className="h-px w-7 bg-primary" aria-hidden="true" />
+              <span
+                className="h-px w-7 bg-primary"
+                aria-hidden="true"
+              />
 
               <p className="font-garamond text-[11px] font-semibold uppercase tracking-[0.2em] text-primary sm:text-xs">
                 Our Fleet
@@ -268,8 +291,8 @@ function FeaturedCars() {
             </h2>
 
             <p className="mt-3 max-w-2xl font-garamond text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              Choose from our collection of reliable and comfortable cars for
-              your next journey.
+              Choose from our collection of reliable and
+              comfortable cars for your next journey.
             </p>
           </div>
 
@@ -283,6 +306,7 @@ function FeaturedCars() {
               className="group inline-flex items-center gap-2 font-garamond text-sm font-semibold text-primary transition hover:gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               View All Cars
+
               <ArrowRight
                 className="h-4 w-4 transition-transform group-hover:translate-x-1"
                 aria-hidden="true"
@@ -300,7 +324,10 @@ function FeaturedCars() {
                   aria-label="Previous featured car"
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                 >
-                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                  <ArrowLeft
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
                 </button>
 
                 <button
@@ -309,7 +336,10 @@ function FeaturedCars() {
                   aria-label="Next featured car"
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                 >
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  <ArrowRight
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
                 </button>
               </div>
             )}
@@ -465,7 +495,9 @@ function FeaturedCars() {
                 type="button"
                 onClick={() => setCurrentIndex(index)}
                 aria-label={`Show featured car ${index + 1}`}
-                aria-current={currentIndex === index ? "true" : undefined}
+                aria-current={
+                  currentIndex === index ? "true" : undefined
+                }
                 className={`h-2 rounded-full transition-all ${
                   currentIndex === index
                     ? "w-8 bg-primary"
@@ -484,7 +516,12 @@ function FeaturedCars() {
 // CAR CARD
 // ================================================================
 
-function CarCard({ car, reviews, getImageUrl, handleImageError }) {
+function CarCard({
+  car,
+  reviews,
+  getImageUrl,
+  handleImageError,
+}) {
   const carId = car?._id || car?.id;
 
   const reviewData = reviews[String(carId)] || {
@@ -492,7 +529,9 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
     totalReviews: 0,
   };
 
-  const carName = `${car?.brand || ""} ${car?.model || ""}`.trim();
+  const carName = `${car?.brand || ""} ${
+    car?.model || ""
+  }`.trim();
 
   return (
     <article className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
@@ -539,10 +578,15 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
 
           <div className="shrink-0 text-right">
             <p className="font-metal text-xl text-primary">
-              ₹{Number(car?.pricePerDay || 0).toLocaleString("en-IN")}
+              ₹
+              {Number(car?.pricePerDay || 0).toLocaleString(
+                "en-IN",
+              )}
             </p>
 
-            <p className="font-garamond text-xs text-muted-foreground">/ day</p>
+            <p className="font-garamond text-xs text-muted-foreground">
+              / day
+            </p>
           </div>
         </div>
 
@@ -565,13 +609,18 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
             </span>
           </div>
 
-          <span className="text-muted-foreground" aria-hidden="true">
+          <span
+            className="text-muted-foreground"
+            aria-hidden="true"
+          >
             ·
           </span>
 
           <span className="font-garamond text-sm text-muted-foreground">
             {reviewData.totalReviews}{" "}
-            {reviewData.totalReviews === 1 ? "review" : "reviews"}
+            {reviewData.totalReviews === 1
+              ? "review"
+              : "reviews"}
           </span>
         </div>
 
@@ -629,6 +678,7 @@ function CarCard({ car, reviews, getImageUrl, handleImageError }) {
           className="group/button mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-foreground px-4 font-garamond text-sm font-semibold text-background transition hover:bg-primary hover:text-primary-foreground focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
         >
           View Details
+
           <ArrowRight
             className="h-4 w-4 transition-transform group-hover/button:translate-x-1"
             aria-hidden="true"
