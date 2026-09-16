@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import { getBookingById } from "../../services/bookingApi";
-import { createPayment } from "../../services/paymentApi";
+import { createPayment, verifyPayment } from "../../services/paymentApi";
 import { useAuth } from "../../context/AuthContext";
 
 const API_ORIGIN =
@@ -30,6 +30,10 @@ function Payment() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // ==========================================
+  // LOAD BOOKING
+  // ==========================================
 
   useEffect(() => {
     const loadBooking = async () => {
@@ -72,16 +76,19 @@ function Payment() {
     loadBooking();
   }, [bookingId, token]);
 
+  // ==========================================
+  // CAR
+  // ==========================================
+
   const car = useMemo(() => {
     if (!booking) return null;
 
-    return (
-      booking.car ||
-      booking.vehicle ||
-      booking.carDetails ||
-      null
-    );
+    return booking.car || booking.vehicle || booking.carDetails || null;
   }, [booking]);
+
+  // ==========================================
+  // DATES
+  // ==========================================
 
   const getStartDate = () =>
     booking?.startDate ||
@@ -97,6 +104,10 @@ function Payment() {
     booking?.bookingEndDate ||
     "";
 
+  // ==========================================
+  // TOTAL AMOUNT
+  // ==========================================
+
   const totalAmount = Number(
     booking?.totalAmount ??
       booking?.totalPrice ??
@@ -104,6 +115,10 @@ function Payment() {
       booking?.price ??
       0,
   );
+
+  // ==========================================
+  // RENTAL DAYS
+  // ==========================================
 
   const rentalDays = useMemo(() => {
     const start = getStartDate();
@@ -114,25 +129,25 @@ function Payment() {
     const startTime = new Date(start).getTime();
     const endTime = new Date(end).getTime();
 
-    if (
-      Number.isNaN(startTime) ||
-      Number.isNaN(endTime)
-    ) {
+    if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
       return 0;
     }
 
     return Math.max(
       0,
-      Math.ceil(
-        (endTime - startTime) /
-          (1000 * 60 * 60 * 24),
-      ),
+      Math.ceil((endTime - startTime) / (1000 * 60 * 60 * 24)),
     );
   }, [booking]);
 
-  const isPaid =
-    String(booking?.paymentStatus || "").toLowerCase() ===
-    "paid";
+  // ==========================================
+  // PAYMENT STATUS
+  // ==========================================
+
+  const isPaid = String(booking?.paymentStatus || "").toLowerCase() === "paid";
+
+  // ==========================================
+  // FORMAT PRICE
+  // ==========================================
 
   const formatPrice = (amount) =>
     new Intl.NumberFormat("en-IN", {
@@ -140,6 +155,10 @@ function Payment() {
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(Number(amount) || 0);
+
+  // ==========================================
+  // FORMAT DATE
+  // ==========================================
 
   const formatDate = (date) => {
     if (!date) return "—";
@@ -157,20 +176,23 @@ function Payment() {
     });
   };
 
+  // ==========================================
+  // IMAGE URL
+  // ==========================================
+
   const getImageUrl = (image) => {
     if (!image) return "";
 
-    if (
-      image.startsWith("http://") ||
-      image.startsWith("https://")
-    ) {
+    if (image.startsWith("http://") || image.startsWith("https://")) {
       return image;
     }
 
-    return `${API_ORIGIN}${
-      image.startsWith("/") ? "" : "/"
-    }${image}`;
+    return `${API_ORIGIN}${image.startsWith("/") ? "" : "/"}${image}`;
   };
+
+  // ==========================================
+  // RAZORPAY PAYMENT
+  // ==========================================
 
   const handlePayment = async () => {
     if (!bookingId || !token) {
@@ -188,71 +210,228 @@ function Payment() {
       return;
     }
 
+    // Check Razorpay script
+    if (!window.Razorpay) {
+      setError(
+        "Payment gateway could not be loaded. Please refresh the page and try again.",
+      );
+      return;
+    }
+
     try {
       setPaymentLoading(true);
       setError("");
       setSuccess("");
 
-      const response = await createPayment(
-        bookingId,
-        token,
-      );
+      // ==========================================
+      // 1. CREATE RAZORPAY ORDER
+      // ==========================================
 
-      const payment =
-        response?.payment ||
-        response?.data?.payment ||
-        response?.data ||
-        response;
+      const response = await createPayment(bookingId, token);
 
-      const paymentId =
-        payment?._id ||
-        payment?.id ||
-        response?.paymentId ||
-        response?.data?.paymentId ||
-        "";
+      if (!response?.success) {
+        throw new Error(response?.message || "Unable to create payment order.");
+      }
 
-      const updatedBooking = {
-        ...booking,
-        paymentStatus: "paid",
-        status: "confirmed",
+      const order = response?.order;
+      const keyId = response?.keyId;
+
+      if (!order?.id || !keyId) {
+        throw new Error("Invalid Razorpay order response.");
+      }
+
+      // ==========================================
+      // 2. RAZORPAY CHECKOUT
+      // ==========================================
+
+      const options = {
+        key: keyId,
+
+        amount: order.amount,
+
+        currency: order.currency || "INR",
+
+        name: "DriveNow",
+
+        description: `Car Rental Booking ${bookingId}`,
+
+        order_id: order.id,
+
+        // ==========================================
+        // CUSTOMER INFORMATION
+        // ==========================================
+
+        prefill: {
+          name: booking?.user?.name || "",
+          email: booking?.user?.email || "",
+        },
+
+        // ==========================================
+        // BOOKING NOTES
+        // ==========================================
+
+        notes: {
+          bookingId,
+        },
+
+        // ==========================================
+        // RAZORPAY THEME
+        // ==========================================
+
+        theme: {
+          color: "#000000",
+        },
+
+        // ==========================================
+        // PAYMENT SUCCESS
+        // ==========================================
+
+        handler: async function (paymentResponse) {
+          try {
+            setPaymentLoading(true);
+            setError("");
+            setSuccess("");
+
+            // ==========================================
+            // 3. VERIFY PAYMENT ON BACKEND
+            // ==========================================
+
+            const verification = await verifyPayment(
+              {
+                bookingId,
+
+                razorpay_order_id: paymentResponse.razorpay_order_id,
+
+                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+
+                razorpay_signature: paymentResponse.razorpay_signature,
+              },
+              token,
+            );
+
+            if (!verification?.success) {
+              throw new Error(
+                verification?.message || "Payment verification failed.",
+              );
+            }
+
+            // ==========================================
+            // 4. UPDATE LOCAL BOOKING
+            // ==========================================
+
+            const updatedBooking = {
+              ...booking,
+              paymentStatus: "paid",
+              status: "confirmed",
+            };
+
+            setBooking(updatedBooking);
+
+            setSuccess("Payment processed successfully.");
+
+            // ==========================================
+            // 5. PAYMENT INFORMATION
+            // ==========================================
+
+            const payment = verification?.payment || null;
+
+            const paymentId =
+              payment?.id ||
+              payment?._id ||
+              paymentResponse.razorpay_payment_id ||
+              "";
+
+            // ==========================================
+            // 6. PAYMENT RESULT PAGE
+            // ==========================================
+
+            setTimeout(() => {
+              navigate("/payment-result", {
+                state: {
+                  success: true,
+
+                  booking: updatedBooking,
+
+                  payment,
+
+                  paymentId,
+
+                  bookingId,
+                },
+              });
+            }, 700);
+          } catch (err) {
+            console.error("Payment verification error:", err);
+
+            setPaymentLoading(false);
+
+            setError(
+              err?.response?.data?.message ||
+                err?.message ||
+                "Payment verification failed. Please contact support if money was deducted.",
+            );
+          }
+        },
+
+        // ==========================================
+        // CHECKOUT CLOSED
+        // ==========================================
+
+        modal: {
+          ondismiss: () => {
+            setPaymentLoading(false);
+
+            setError("Payment was cancelled. Your booking is still unpaid.");
+          },
+        },
       };
 
-      setBooking(updatedBooking);
+      // ==========================================
+      // CREATE RAZORPAY INSTANCE
+      // ==========================================
 
-      setSuccess("Payment processed successfully.");
+      const razorpay = new window.Razorpay(options);
 
-      setTimeout(() => {
-        navigate("/payment-result", {
-          state: {
-            success: true,
-            booking: updatedBooking,
-            payment,
-            paymentId,
-            bookingId,
-          },
-        });
-      }, 700);
+      // ==========================================
+      // PAYMENT FAILED
+      // ==========================================
+
+      razorpay.on("payment.failed", (response) => {
+        console.error("Razorpay payment failed:", response);
+
+        setPaymentLoading(false);
+
+        setError(
+          response?.error?.description || "Payment failed. Please try again.",
+        );
+      });
+
+      // ==========================================
+      // OPEN RAZORPAY
+      // ==========================================
+
+      razorpay.open();
     } catch (err) {
-      console.error("Payment error:", err);
+      console.error("Create payment error:", err);
+
+      setPaymentLoading(false);
 
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Payment failed. Please try again.",
+          "Unable to start payment. Please try again.",
       );
-    } finally {
-      setPaymentLoading(false);
     }
   };
+
+  // ==========================================
+  // LOADING STATE
+  // ==========================================
 
   if (loading) {
     return (
       <main className="flex min-h-[70vh] items-center justify-center bg-background px-4">
-        <div
-          className="text-center"
-          role="status"
-          aria-live="polite"
-        >
+        <div className="text-center" role="status" aria-live="polite">
           <Loader2
             className="mx-auto h-9 w-9 animate-spin text-primary"
             aria-hidden="true"
@@ -266,15 +445,16 @@ function Payment() {
     );
   }
 
+  // ==========================================
+  // ERROR STATE
+  // ==========================================
+
   if (error && !booking) {
     return (
       <main className="flex min-h-[70vh] items-center justify-center bg-background px-4">
         <div className="w-full max-w-md border border-border bg-card p-7 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-            <AlertCircle
-              className="h-6 w-6"
-              aria-hidden="true"
-            />
+            <AlertCircle className="h-6 w-6" aria-hidden="true" />
           </div>
 
           <h1 className="mt-5 font-metal text-3xl text-foreground">
@@ -296,6 +476,10 @@ function Payment() {
     );
   }
 
+  // ==========================================
+  // MAIN PAYMENT PAGE
+  // ==========================================
+
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-[1400px] px-5 py-10 sm:px-8 lg:px-10 lg:py-16">
@@ -304,10 +488,7 @@ function Payment() {
             to="/my-bookings"
             className="mb-8 inline-flex items-center gap-2 font-garamond text-base font-semibold text-muted-foreground transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            <ArrowLeft
-              className="h-[18px] w-[18px]"
-              aria-hidden="true"
-            />
+            <ArrowLeft className="h-[18px] w-[18px]" aria-hidden="true" />
             Back to My Bookings
           </Link>
 
@@ -322,15 +503,12 @@ function Payment() {
           <h1 className="mt-5 font-metal text-5xl leading-[0.92] tracking-tight text-foreground sm:text-6xl lg:text-7xl">
             Complete
             <br />
-            Your{" "}
-            <span className="text-primary">
-              Payment.
-            </span>
+            Your <span className="text-primary">Payment.</span>
           </h1>
 
           <p className="mt-5 max-w-xl font-garamond text-xl leading-relaxed text-muted-foreground">
-            Review your booking details and securely
-            complete your DriveNow rental payment.
+            Review your booking details and securely complete your DriveNow
+            rental payment.
           </p>
         </div>
 
@@ -365,13 +543,14 @@ function Payment() {
         )}
 
         <div className="grid gap-8 lg:grid-cols-[1fr_390px] lg:items-start">
+          {/* ==========================================
+              BOOKING DETAILS
+          ========================================== */}
+
           <section className="border-y border-border bg-background">
             <div className="flex items-center gap-4 border-b border-border py-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-primary">
-                <Car
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                />
+                <Car className="h-5 w-5" aria-hidden="true" />
               </div>
 
               <div>
@@ -391,17 +570,12 @@ function Payment() {
                   {car?.image ? (
                     <img
                       src={getImageUrl(car.image)}
-                      alt={`${car?.brand || ""} ${
-                        car?.model || ""
-                      }`}
+                      alt={`${car?.brand || ""} ${car?.model || ""}`}
                       className="h-full w-full object-cover"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground">
-                      <Car
-                        className="h-12 w-12"
-                        aria-hidden="true"
-                      />
+                      <Car className="h-12 w-12" aria-hidden="true" />
                     </div>
                   )}
                 </div>
@@ -425,23 +599,14 @@ function Payment() {
             </div>
 
             <div className="grid border-b border-border sm:grid-cols-2">
-              <DateCard
-                title="Pickup Date"
-                date={formatDate(getStartDate())}
-              />
+              <DateCard title="Pickup Date" date={formatDate(getStartDate())} />
 
-              <DateCard
-                title="Return Date"
-                date={formatDate(getEndDate())}
-              />
+              <DateCard title="Return Date" date={formatDate(getEndDate())} />
             </div>
 
             <div className="flex items-center gap-4 py-6">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-primary">
-                <CalendarDays
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                />
+                <CalendarDays className="h-5 w-5" aria-hidden="true" />
               </div>
 
               <div>
@@ -451,24 +616,21 @@ function Payment() {
 
                 <p className="font-garamond text-base text-muted-foreground">
                   {rentalDays > 0
-                    ? `${rentalDays} ${
-                        rentalDays === 1
-                          ? "day"
-                          : "days"
-                      }`
+                    ? `${rentalDays} ${rentalDays === 1 ? "day" : "days"}`
                     : "Duration unavailable"}
                 </p>
               </div>
             </div>
           </section>
 
+          {/* ==========================================
+              PAYMENT SUMMARY
+          ========================================== */}
+
           <section className="border border-border bg-card p-6 sm:p-7">
             <div className="flex items-center gap-4 border-b border-border pb-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success text-foreground">
-                <CreditCard
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                />
+                <CreditCard className="h-5 w-5" aria-hidden="true" />
               </div>
 
               <div>
@@ -503,9 +665,7 @@ function Payment() {
 
             <div className="space-y-4 py-6">
               <div className="flex items-center justify-between font-garamond text-base">
-                <span className="text-muted-foreground">
-                  Rental days
-                </span>
+                <span className="text-muted-foreground">Rental days</span>
 
                 <span className="font-semibold text-foreground">
                   {rentalDays}
@@ -513,16 +673,10 @@ function Payment() {
               </div>
 
               <div className="flex items-center justify-between font-garamond text-base">
-                <span className="text-muted-foreground">
-                  Price per day
-                </span>
+                <span className="text-muted-foreground">Price per day</span>
 
                 <span className="font-semibold text-foreground">
-                  {formatPrice(
-                    rentalDays > 0
-                      ? totalAmount / rentalDays
-                      : 0,
-                  )}
+                  {formatPrice(rentalDays > 0 ? totalAmount / rentalDays : 0)}
                 </span>
               </div>
             </div>
@@ -551,8 +705,7 @@ function Payment() {
                 </p>
 
                 <p className="mt-1 font-garamond text-sm leading-5 text-muted-foreground">
-                  Your payment is securely processed
-                  through DriveNow.
+                  Your payment is securely processed through DriveNow.
                 </p>
               </div>
             </div>
@@ -562,19 +715,14 @@ function Payment() {
                 to="/my-bookings"
                 className="mt-6 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full border border-border bg-muted px-5 font-garamond text-lg font-semibold text-foreground transition hover:bg-background focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
               >
-                <CheckCircle2
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                />
+                <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
                 View My Bookings
               </Link>
             ) : (
               <button
                 type="button"
                 onClick={handlePayment}
-                disabled={
-                  paymentLoading || totalAmount <= 0
-                }
+                disabled={paymentLoading || totalAmount <= 0}
                 className="mt-6 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-garamond text-lg font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {paymentLoading ? (
@@ -587,10 +735,7 @@ function Payment() {
                   </>
                 ) : (
                   <>
-                    <CreditCard
-                      className="h-5 w-5"
-                      aria-hidden="true"
-                    />
+                    <CreditCard className="h-5 w-5" aria-hidden="true" />
                     Pay {formatPrice(totalAmount)}
                   </>
                 )}
@@ -598,8 +743,7 @@ function Payment() {
             )}
 
             <p className="mt-4 text-center font-garamond text-sm text-muted-foreground">
-              By continuing, you agree to the DriveNow
-              rental terms.
+              By continuing, you agree to the DriveNow rental terms.
             </p>
           </section>
         </div>
@@ -608,12 +752,14 @@ function Payment() {
   );
 }
 
+// ==========================================
+// DATE CARD
+// ==========================================
+
 function DateCard({ title, date }) {
   return (
     <div className="border-b border-border p-5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
-      <p className="font-garamond text-sm text-muted-foreground">
-        {title}
-      </p>
+      <p className="font-garamond text-sm text-muted-foreground">{title}</p>
 
       <div className="mt-2 flex items-center gap-2">
         <CalendarDays

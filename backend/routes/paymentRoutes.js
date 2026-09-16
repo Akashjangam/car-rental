@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   createPayment,
+  verifyPayment,
   paymentCallback,
   getPaymentStatus,
 } = require("../controllers/paymentController");
@@ -10,16 +11,32 @@ const protect = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// Create payment
+// ======================================================
+// CREATE RAZORPAY PAYMENT ORDER
 // POST /api/payments
+// ======================================================
+
 router.post("/", protect, createPayment);
 
-// Paytm callback
+// ======================================================
+// VERIFY RAZORPAY PAYMENT
+// POST /api/payments/verify
+// ======================================================
+
+router.post("/verify", protect, verifyPayment);
+
+// ======================================================
+// RAZORPAY CALLBACK
 // POST /api/payments/callback
+// ======================================================
+
 router.post("/callback", paymentCallback);
 
-// Payment status
+// ======================================================
+// GET PAYMENT STATUS
 // GET /api/payments/status/:orderId
+// ======================================================
+
 router.get("/status/:orderId", protect, getPaymentStatus);
 
 module.exports = router;

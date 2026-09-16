@@ -3,11 +3,13 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   CarFront,
+  ChevronDown,
   ChevronRight,
   Fuel,
   Gauge,
   Heart,
   Search,
+  SlidersHorizontal,
   Star,
   Users,
   X,
@@ -25,9 +27,22 @@ function Cars() {
 
   const [cars, setCars] = useState([]);
   const [reviews, setReviews] = useState({});
+
   const [search, setSearch] = useState(searchParams.get("search") || "");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // ============================================================
+  // FILTER STATES
+  // ============================================================
+  const [showFilters, setShowFilters] = useState(false);
+
+  const [fuelFilter, setFuelFilter] = useState("all");
+  const [transmissionFilter, setTransmissionFilter] = useState("all");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [minSeats, setMinSeats] = useState("all");
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   // ============================================================
   // FETCH CARS + REVIEWS
@@ -141,35 +156,169 @@ function Cars() {
   // FILTER CARS
   // ============================================================
   const filteredCars = useMemo(() => {
-    const value = search.trim().toLowerCase();
-
-    if (!value) {
-      return cars;
-    }
+    const searchValue = search.trim().toLowerCase();
 
     return cars.filter((car) => {
-      const searchableText = [
-        car?.name,
-        car?.brand,
-        car?.model,
-        car?.numberPlate,
-        car?.category,
-        car?.fuelType,
-        car?.transmission,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+      // --------------------------------------------------------
+      // TEXT SEARCH
+      // --------------------------------------------------------
+      if (searchValue) {
+        const searchableText = [
+          car?.name,
+          car?.brand,
+          car?.model,
+          car?.numberPlate,
+          car?.category,
+          car?.fuelType,
+          car?.transmission,
+          car?.year,
+          car?.pricePerDay,
+          car?.rentPerDay,
+          car?.dailyRate,
+          car?.price,
+          car?.location,
+          car?.pickupLocation,
+        ]
+          .filter((item) => item !== undefined && item !== null && item !== "")
+          .join(" ")
+          .toLowerCase();
 
-      return searchableText.includes(value);
+        if (!searchableText.includes(searchValue)) {
+          return false;
+        }
+      }
+
+      // --------------------------------------------------------
+      // FUEL
+      // --------------------------------------------------------
+      if (fuelFilter !== "all") {
+        const carFuel = String(car?.fuelType || car?.fuel || "").toLowerCase();
+
+        if (carFuel !== fuelFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // --------------------------------------------------------
+      // TRANSMISSION
+      // --------------------------------------------------------
+      if (transmissionFilter !== "all") {
+        const carTransmission = String(
+          car?.transmission || car?.gearbox || "",
+        ).toLowerCase();
+
+        if (carTransmission !== transmissionFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // --------------------------------------------------------
+      // MAXIMUM PRICE
+      // --------------------------------------------------------
+      if (maxPrice !== "") {
+        const carPrice = Number(
+          car?.pricePerDay ??
+            car?.rentPerDay ??
+            car?.dailyRate ??
+            car?.price ??
+            0,
+        );
+
+        if (carPrice > Number(maxPrice)) {
+          return false;
+        }
+      }
+
+      // --------------------------------------------------------
+      // MINIMUM SEATS
+      // --------------------------------------------------------
+      if (minSeats !== "all") {
+        const carSeats = Number(car?.seats || car?.capacity || 0);
+
+        if (carSeats < Number(minSeats)) {
+          return false;
+        }
+      }
+
+      // --------------------------------------------------------
+      // AVAILABLE ONLY
+      // --------------------------------------------------------
+      if (availableOnly) {
+        const isAvailable =
+          car?.available !== false &&
+          car?.isAvailable !== false &&
+          car?.availability !== false;
+
+        if (!isAvailable) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [cars, search]);
+  }, [
+    cars,
+    search,
+    fuelFilter,
+    transmissionFilter,
+    maxPrice,
+    minSeats,
+    availableOnly,
+  ]);
+
+  // ============================================================
+  // ACTIVE FILTER COUNT
+  // ============================================================
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+
+    if (fuelFilter !== "all") {
+      count++;
+    }
+
+    if (transmissionFilter !== "all") {
+      count++;
+    }
+
+    if (maxPrice !== "") {
+      count++;
+    }
+
+    if (minSeats !== "all") {
+      count++;
+    }
+
+    if (availableOnly) {
+      count++;
+    }
+
+    return count;
+  }, [fuelFilter, transmissionFilter, maxPrice, minSeats, availableOnly]);
 
   // ============================================================
   // CLEAR SEARCH
   // ============================================================
   const clearSearch = () => {
     setSearch("");
+  };
+
+  // ============================================================
+  // CLEAR FILTERS
+  // ============================================================
+  const clearFilters = () => {
+    setFuelFilter("all");
+    setTransmissionFilter("all");
+    setMaxPrice("");
+    setMinSeats("all");
+    setAvailableOnly(false);
+  };
+
+  // ============================================================
+  // CLEAR EVERYTHING
+  // ============================================================
+  const clearAll = () => {
+    setSearch("");
+    clearFilters();
   };
 
   return (
@@ -211,9 +360,9 @@ function Cars() {
               Search cars
             </label>
 
-            <div className="relative">
+            <div className="group relative transition-all duration-300 focus-within:scale-[1.01]">
               <Search
-                className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground"
+                className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-all duration-300 group-focus-within:scale-110 group-focus-within:text-primary"
                 aria-hidden="true"
               />
 
@@ -224,7 +373,7 @@ function Cars() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by brand, model, category..."
-                className="h-14 w-full rounded-full border border-border bg-card pl-14 pr-14 font-garamond text-lg text-foreground outline-none transition placeholder:text-muted-foreground hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/20"
+                className="h-14 w-full rounded-full border border-border bg-card pl-14 pr-14 font-garamond text-lg text-foreground outline-none transition-all duration-300 placeholder:text-muted-foreground hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
 
               {search && (
@@ -232,13 +381,175 @@ function Cars() {
                   type="button"
                   onClick={clearSearch}
                   aria-label="Clear car search"
-                  className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-all duration-300 hover:rotate-90 hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
             </div>
+
+            {search.trim() && !loading && !error && (
+              <p className="mt-3 animate-[fadeInUp_0.3s_ease-out] font-garamond text-sm text-muted-foreground">
+                Searching across brand, model, number plate, category, fuel
+                type, transmission, year and price.
+              </p>
+            )}
           </div>
+
+          {/* ==================================================
+              FILTER BUTTON
+          =================================================== */}
+          <div className="mt-5 max-w-3xl">
+            <button
+              type="button"
+              onClick={() => setShowFilters((current) => !current)}
+              className="group inline-flex min-h-12 items-center gap-3 rounded-full border border-border bg-card px-5 font-garamond text-base font-semibold text-foreground transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+              aria-expanded={showFilters}
+            >
+              <SlidersHorizontal
+                className="h-5 w-5 text-primary transition-transform duration-300 group-hover:rotate-12"
+                aria-hidden="true"
+              />
+              Extended filters
+              {activeFilterCount > 0 && (
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-2 text-xs font-bold text-primary-foreground">
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-300 ${
+                  showFilters ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+
+          {/* ==================================================
+              FILTER PANEL
+          =================================================== */}
+          {showFilters && (
+            <div className="mt-5 max-w-5xl animate-[fadeInUp_0.35s_ease-out] rounded-[24px] border border-border bg-card p-5 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-metal text-2xl text-foreground">
+                      Filter cars
+                    </h2>
+
+                    <p className="mt-1 font-garamond text-sm text-muted-foreground">
+                      Refine your search using the options below.
+                    </p>
+                  </div>
+
+                  {activeFilterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="font-garamond text-sm font-semibold text-primary transition hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  {/* Fuel */}
+                  <FilterField label="Fuel type" htmlFor="fuel-filter">
+                    <select
+                      id="fuel-filter"
+                      value={fuelFilter}
+                      onChange={(event) => setFuelFilter(event.target.value)}
+                      className="h-12 w-full appearance-none rounded-xl border border-border bg-background px-4 font-garamond text-base text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    >
+                      <option value="all">All fuel types</option>
+                      <option value="Petrol">Petrol</option>
+                      <option value="Diesel">Diesel</option>
+                      <option value="Electric">Electric</option>
+                      <option value="Hybrid">Hybrid</option>
+                      <option value="CNG">CNG</option>
+                    </select>
+                  </FilterField>
+
+                  {/* Transmission */}
+                  <FilterField
+                    label="Transmission"
+                    htmlFor="transmission-filter"
+                  >
+                    <select
+                      id="transmission-filter"
+                      value={transmissionFilter}
+                      onChange={(event) =>
+                        setTransmissionFilter(event.target.value)
+                      }
+                      className="h-12 w-full appearance-none rounded-xl border border-border bg-background px-4 font-garamond text-base text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    >
+                      <option value="all">All transmissions</option>
+                      <option value="Manual">Manual</option>
+                      <option value="Automatic">Automatic</option>
+                    </select>
+                  </FilterField>
+
+                  {/* Maximum price */}
+                  <FilterField label="Maximum price / day" htmlFor="max-price">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-garamond text-muted-foreground">
+                        ₹
+                      </span>
+
+                      <input
+                        id="max-price"
+                        type="number"
+                        min="0"
+                        value={maxPrice}
+                        onChange={(event) => setMaxPrice(event.target.value)}
+                        placeholder="e.g. 3000"
+                        className="h-12 w-full rounded-xl border border-border bg-background pl-9 pr-4 font-garamond text-base text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
+                      />
+                    </div>
+                  </FilterField>
+
+                  {/* Minimum seats */}
+                  <FilterField label="Minimum seats" htmlFor="min-seats">
+                    <select
+                      id="min-seats"
+                      value={minSeats}
+                      onChange={(event) => setMinSeats(event.target.value)}
+                      className="h-12 w-full appearance-none rounded-xl border border-border bg-background px-4 font-garamond text-base text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    >
+                      <option value="all">Any seats</option>
+                      <option value="2">2+ seats</option>
+                      <option value="4">4+ seats</option>
+                      <option value="5">5+ seats</option>
+                      <option value="6">6+ seats</option>
+                      <option value="7">7+ seats</option>
+                      <option value="8">8+ seats</option>
+                    </select>
+                  </FilterField>
+                </div>
+
+                {/* Available only */}
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3 transition hover:border-primary/50">
+                  <input
+                    type="checkbox"
+                    checked={availableOnly}
+                    onChange={(event) => setAvailableOnly(event.target.checked)}
+                    className="h-5 w-5 rounded border-border accent-primary"
+                  />
+
+                  <div>
+                    <p className="font-garamond text-base font-semibold text-foreground">
+                      Available cars only
+                    </p>
+
+                    <p className="font-garamond text-sm text-muted-foreground">
+                      Hide cars that are currently unavailable.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -247,7 +558,7 @@ function Cars() {
       ======================================================= */}
       <section className="mx-auto max-w-[1400px] px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
         {!loading && !error && (
-          <div className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-5">
+          <div className="mb-8 flex flex-col gap-5 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="font-metal text-3xl text-foreground sm:text-4xl">
                 Available cars
@@ -258,6 +569,17 @@ function Cars() {
                 {filteredCars.length === 1 ? "car" : "cars"} found
               </p>
             </div>
+
+            {(search.trim() || activeFilterCount > 0) && (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-full border border-border px-4 font-garamond text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary sm:self-auto"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+                Clear all
+              </button>
+            )}
           </div>
         )}
 
@@ -320,12 +642,9 @@ function Cars() {
         ======================================================= */}
         {!loading && !error && filteredCars.length === 0 && (
           <div className="flex min-h-[350px] items-center justify-center">
-            <div className="w-full max-w-xl border-y border-border px-6 py-12 text-center">
+            <div className="w-full max-w-xl animate-[fadeInUp_0.5s_ease-out] border-y border-border px-6 py-12 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                <CarFront
-                  className="h-8 w-8 text-primary"
-                  aria-hidden="true"
-                />
+                <CarFront className="h-8 w-8 text-primary" aria-hidden="true" />
               </div>
 
               <h2 className="mt-6 font-metal text-4xl text-foreground">
@@ -333,18 +652,18 @@ function Cars() {
               </h2>
 
               <p className="mx-auto mt-3 max-w-md font-garamond text-lg leading-relaxed text-muted-foreground">
-                {search
-                  ? "Try a different brand, model, or category."
+                {search || activeFilterCount > 0
+                  ? "Try changing your search or filters."
                   : "There are currently no cars available."}
               </p>
 
-              {search && (
+              {(search || activeFilterCount > 0) && (
                 <button
                   type="button"
-                  onClick={clearSearch}
+                  onClick={clearAll}
                   className="mt-6 min-h-11 rounded-full border border-border bg-background px-6 font-garamond text-base font-semibold text-foreground transition hover:bg-muted focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                 >
-                  Clear search
+                  Clear all
                 </button>
               )}
             </div>
@@ -355,27 +674,53 @@ function Cars() {
             CAR GRID
         ======================================================= */}
         {!loading && !error && filteredCars.length > 0 && (
-          <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredCars.map((car) => {
+          <div className="grid grid-cols-1 items-stretch gap-7 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredCars.map((car, index) => {
               const carId = car?._id || car?.id;
 
               return (
-                <CarCard
+                <div
                   key={carId}
-                  car={car}
-                  reviewData={
-                    reviews[String(carId)] || {
-                      totalReviews: 0,
-                      averageRating: 0,
+                  className="h-full animate-[fadeInUp_0.5s_ease-out]"
+                  style={{
+                    animationDelay: `${Math.min(index * 80, 400)}ms`,
+                    animationFillMode: "both",
+                  }}
+                >
+                  <CarCard
+                    car={car}
+                    reviewData={
+                      reviews[String(carId)] || {
+                        totalReviews: 0,
+                        averageRating: 0,
+                      }
                     }
-                  }
-                />
+                  />
+                </div>
               );
             })}
           </div>
         )}
       </section>
     </main>
+  );
+}
+
+// ================================================================
+// FILTER FIELD
+// ================================================================
+function FilterField({ label, htmlFor, children }) {
+  return (
+    <div>
+      <label
+        htmlFor={htmlFor}
+        className="mb-2 block font-garamond text-sm font-semibold text-foreground"
+      >
+        {label}
+      </label>
+
+      {children}
+    </div>
   );
 }
 
@@ -427,13 +772,10 @@ function CarCard({ car, reviewData }) {
     }
 
     try {
-      const savedCars = JSON.parse(
-        localStorage.getItem("savedCars") || "[]",
-      );
+      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
 
       const alreadySaved = savedCars.some(
-        (savedCar) =>
-          String(savedCar?._id || savedCar?.id) === String(carId),
+        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
       );
 
       setIsSaved(alreadySaved);
@@ -452,21 +794,17 @@ function CarCard({ car, reviewData }) {
     }
 
     try {
-      const savedCars = JSON.parse(
-        localStorage.getItem("savedCars") || "[]",
-      );
+      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
 
       const alreadySaved = savedCars.some(
-        (savedCar) =>
-          String(savedCar?._id || savedCar?.id) === String(carId),
+        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
       );
 
       let updatedCars;
 
       if (alreadySaved) {
         updatedCars = savedCars.filter(
-          (savedCar) =>
-            String(savedCar?._id || savedCar?.id) !== String(carId),
+          (savedCar) => String(savedCar?._id || savedCar?.id) !== String(carId),
         );
       } else {
         updatedCars = [...savedCars, car];
@@ -481,11 +819,11 @@ function CarCard({ car, reviewData }) {
   };
 
   return (
-    <article className="group overflow-hidden rounded-[28px] border border-border bg-card transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+    <article className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
       {/* ======================================================
           IMAGE
       ======================================================= */}
-      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+      <div className="relative aspect-[16/10] shrink-0 overflow-hidden bg-muted">
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -508,9 +846,7 @@ function CarCard({ car, reviewData }) {
           </div>
         )}
 
-        {/* ====================================================
-            AVAILABILITY
-        ===================================================== */}
+        {/* Availability */}
         <div className="absolute left-4 top-4">
           <span
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 font-garamond text-sm font-semibold shadow-sm ${
@@ -521,7 +857,7 @@ function CarCard({ car, reviewData }) {
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                isAvailable ? "bg-success" : "bg-muted-foreground"
+                isAvailable ? "bg-green-600" : "bg-muted-foreground"
               }`}
               aria-hidden="true"
             />
@@ -530,21 +866,17 @@ function CarCard({ car, reviewData }) {
           </span>
         </div>
 
-        {/* ====================================================
-            FAVORITE
-        ===================================================== */}
+        {/* Favorite */}
         <button
           type="button"
           onClick={toggleSavedCar}
-          className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 ${
+          className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 ${
             isSaved
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-background/90 text-foreground hover:border-primary hover:text-primary"
           }`}
           aria-label={
-            isSaved
-              ? `Remove ${carName} from saved cars`
-              : `Save ${carName}`
+            isSaved ? `Remove ${carName} from saved cars` : `Save ${carName}`
           }
           aria-pressed={isSaved}
           title={isSaved ? "Remove from saved cars" : "Save car"}
@@ -561,100 +893,104 @@ function CarCard({ car, reviewData }) {
       {/* ======================================================
           CONTENT
       ======================================================= */}
-      <div className="p-6">
-        <div className="flex items-start justify-between gap-5">
-          <div className="min-w-0">
-            <h3 className="truncate font-metal text-2xl text-foreground">
-              {carName}
-            </h3>
+      <div className="flex flex-1 flex-col p-6">
+        <div>
+          <div className="flex items-start justify-between gap-5">
+            <div className="min-w-0">
+              <h3 className="truncate font-metal text-2xl text-foreground">
+                {carName}
+              </h3>
 
-            {car?.category && (
-              <p className="mt-1 font-garamond text-base text-muted-foreground">
-                {car.category}
+              {car?.category && (
+                <p className="mt-1 font-garamond text-base text-muted-foreground">
+                  {car.category}
+                </p>
+              )}
+            </div>
+
+            <div className="shrink-0 text-right">
+              <p className="font-metal text-2xl text-foreground">
+                ₹{Number(price).toLocaleString("en-IN")}
               </p>
-            )}
+
+              <p className="font-garamond text-sm text-muted-foreground">
+                per day
+              </p>
+            </div>
           </div>
 
-          <div className="shrink-0 text-right">
-            <p className="font-metal text-2xl text-foreground">
-              ₹{Number(price).toLocaleString("en-IN")}
-            </p>
+          {/* Number plate */}
+          {car?.numberPlate && (
+            <div className="mt-3">
+              <span
+                className="inline-flex max-w-full rounded-lg border border-border bg-muted/30 px-3 py-1.5 font-garamond text-sm font-semibold uppercase tracking-wider text-foreground"
+                title={`Number Plate: ${car.numberPlate}`}
+              >
+                Number Plate: {car.numberPlate}
+              </span>
+            </div>
+          )}
 
-            <p className="font-garamond text-sm text-muted-foreground">
-              per day
-            </p>
-          </div>
-        </div>
+          {/* Reviews */}
+          <div className="mt-4 flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Star
+                className="h-4 w-4 text-primary"
+                fill="currentColor"
+                aria-hidden="true"
+              />
 
-        {/* ====================================================
-            NUMBER PLATE
-        ===================================================== */}
-        {car?.numberPlate && (
-          <div className="mt-3">
-            <span className="inline-flex rounded-lg border border-border bg-muted/30 px-3 py-1.5 font-garamond text-sm font-semibold uppercase tracking-wider text-foreground">
-              Number Plate: {car.numberPlate}
+              <span className="font-garamond text-sm font-bold text-foreground">
+                {averageRating > 0 ? averageRating.toFixed(1) : "No rating"}
+              </span>
+            </div>
+
+            <span className="text-muted-foreground" aria-hidden="true">
+              ·
+            </span>
+
+            <span className="font-garamond text-sm text-muted-foreground">
+              {totalReviews} {totalReviews === 1 ? "review" : "reviews"}
             </span>
           </div>
-        )}
 
-        {/* ====================================================
-            REVIEWS
-        ===================================================== */}
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Star
-              className="h-4 w-4 text-primary"
-              fill="currentColor"
-              aria-hidden="true"
+          {/* Specifications */}
+          <div className="mt-5 grid grid-cols-3 divide-x divide-border border-y border-border py-4">
+            <SpecItem
+              icon={<Gauge className="h-4 w-4" />}
+              label={transmission}
             />
 
-            <span className="font-garamond text-sm font-bold text-foreground">
-              {averageRating > 0 ? averageRating.toFixed(1) : "No rating"}
-            </span>
+            <SpecItem icon={<Fuel className="h-4 w-4" />} label={fuel} />
+
+            <SpecItem
+              icon={<Users className="h-4 w-4" />}
+              label={`${seats} Seats`}
+            />
           </div>
-
-          <span className="text-muted-foreground" aria-hidden="true">
-            ·
-          </span>
-
-          <span className="font-garamond text-sm text-muted-foreground">
-            {totalReviews} {totalReviews === 1 ? "review" : "reviews"}
-          </span>
         </div>
 
         {/* ====================================================
-            SPECIFICATIONS
+            ACTION - ALWAYS AT BOTTOM
         ===================================================== */}
-        <div className="mt-5 grid grid-cols-3 divide-x divide-border border-y border-border py-4">
-          <SpecItem
-            icon={<Gauge className="h-4 w-4" />}
-            label={transmission}
-          />
-
-          <SpecItem icon={<Fuel className="h-4 w-4" />} label={fuel} />
-
-          <SpecItem
-            icon={<Users className="h-4 w-4" />}
-            label={`${seats} Seats`}
-          />
+        <div className="mt-auto pt-6">
+          {carId ? (
+            <Link
+              to={`/cars/${carId}`}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-garamond text-lg font-semibold text-primary-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+            >
+              View details
+              <ChevronRight
+                className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
+                aria-hidden="true"
+              />
+            </Link>
+          ) : (
+            <span className="flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full bg-muted px-5 font-garamond text-lg font-semibold text-muted-foreground">
+              Details unavailable
+            </span>
+          )}
         </div>
-
-        {/* ====================================================
-            ACTION
-        ===================================================== */}
-        {carId ? (
-          <Link
-            to={`/cars/${carId}`}
-            className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-garamond text-lg font-semibold text-primary-foreground transition hover:opacity-90 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
-          >
-            View details
-            <ChevronRight className="h-5 w-5" aria-hidden="true" />
-          </Link>
-        ) : (
-          <span className="mt-6 flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full bg-muted px-5 font-garamond text-lg font-semibold text-muted-foreground">
-            Details unavailable
-          </span>
-        )}
       </div>
     </article>
   );
@@ -683,12 +1019,12 @@ function SpecItem({ icon, label }) {
 function CarSkeleton() {
   return (
     <div
-      className="overflow-hidden rounded-[28px] border border-border bg-card"
+      className="flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card"
       aria-hidden="true"
     >
-      <div className="aspect-[16/10] animate-pulse bg-muted" />
+      <div className="aspect-[16/10] shrink-0 animate-pulse bg-muted" />
 
-      <div className="space-y-5 p-6">
+      <div className="flex flex-1 flex-col space-y-5 p-6">
         <div className="flex justify-between gap-4">
           <div className="h-7 w-36 animate-pulse rounded bg-muted" />
 
@@ -699,7 +1035,7 @@ function CarSkeleton() {
 
         <div className="h-16 animate-pulse rounded bg-muted" />
 
-        <div className="h-12 animate-pulse rounded-full bg-muted" />
+        <div className="mt-auto h-12 animate-pulse rounded-full bg-muted" />
       </div>
     </div>
   );

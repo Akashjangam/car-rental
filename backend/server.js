@@ -8,6 +8,10 @@ dotenv.config();
 
 const connectDB = require("./config/db");
 
+// Models
+const Booking = require("./models/Booking");
+
+// Routes
 const authRoutes = require("./routes/authRoutes");
 const carRoutes = require("./routes/carRoutes");
 const dealerRoutes = require("./routes/dealerRoutes");
@@ -52,19 +56,9 @@ app.use(
 
     credentials: true,
 
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-    ],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
@@ -84,10 +78,7 @@ app.use(
    STATIC UPLOADS
 ===================================================== */
 
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads")),
-);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /* =====================================================
    API ROUTES
@@ -117,6 +108,57 @@ app.get("/", (req, res) => {
     message: "Car Rental API is running",
   });
 });
+
+/* =====================================================
+   AUTOMATIC BOOKING COMPLETION
+===================================================== */
+
+/*
+  Confirmed + paid bookings automatically become
+  completed after their return date/time has passed.
+
+  Example:
+
+  confirmed + paid
+        ↓
+  returnDate reached
+        ↓
+     completed
+        ↓
+  customer can review
+*/
+
+const completeExpiredBookings = async () => {
+  try {
+    const now = new Date();
+
+    const result = await Booking.updateMany(
+      {
+        status: "confirmed",
+        paymentStatus: "paid",
+        endDate: {
+          $lte: now,
+        },
+      },
+      {
+        $set: {
+          status: "completed",
+        },
+      },
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(
+        `[Booking Job] ${result.modifiedCount} booking(s) marked as completed.`,
+      );
+    }
+  } catch (error) {
+    console.error(
+      "[Booking Job] Failed to complete expired bookings:",
+      error.message,
+    );
+  }
+};
 
 /* =====================================================
    GLOBAL ERROR HANDLER
@@ -169,10 +211,29 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
+    // Connect MongoDB first
     await connectDB();
+
+    console.log("MongoDB connected successfully.");
+
+    /*
+      Run once immediately after server starts.
+      This catches any bookings that expired while
+      the server was stopped.
+    */
+    await completeExpiredBookings();
+
+    /*
+      Check every 60 seconds.
+    */
+    setInterval(completeExpiredBookings, 60 * 1000);
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
+
+      console.log("Automatic booking completion: ENABLED");
+
+      console.log("Booking completion check: every 60 seconds");
 
       console.log("Allowed CORS origins:");
 
@@ -181,10 +242,7 @@ const startServer = async () => {
       });
     });
   } catch (error) {
-    console.error(
-      "Unable to start server:",
-      error.message,
-    );
+    console.error("Unable to start server:", error.message);
 
     process.exit(1);
   }

@@ -1,12 +1,18 @@
 const Booking = require("../models/Booking");
 const Car = require("../models/Car");
 
+const { sendBookingCancellationEmail } = require("../services/emailService");
+
+/* =========================================================
+   CREATE BOOKING
+========================================================= */
+
 const createBooking = async (req, res) => {
   try {
     const { carId, startDate, endDate, pickupDate, returnDate } = req.body;
 
-    // Support both naming styles
     const bookingStartDate = startDate || pickupDate;
+
     const bookingEndDate = endDate || returnDate;
 
     if (!carId) {
@@ -24,6 +30,7 @@ const createBooking = async (req, res) => {
     }
 
     const start = new Date(bookingStartDate);
+
     const end = new Date(bookingEndDate);
 
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
@@ -65,10 +72,11 @@ const createBooking = async (req, res) => {
       });
     }
 
+    /* ---------- Check overlapping bookings ---------- */
+
     const overlappingBooking = await Booking.findOne({
       car: carId,
 
-      // Cancelled bookings do not block the car
       status: {
         $in: ["pending", "confirmed"],
       },
@@ -90,6 +98,8 @@ const createBooking = async (req, res) => {
       });
     }
 
+    /* ---------- Calculate rental days ---------- */
+
     const millisecondsPerDay = 1000 * 60 * 60 * 24;
 
     const rentalDays = Math.ceil(
@@ -97,6 +107,8 @@ const createBooking = async (req, res) => {
     );
 
     const totalAmount = rentalDays * car.pricePerDay;
+
+    /* ---------- Create booking ---------- */
 
     const booking = await Booking.create({
       user: req.user._id,
@@ -108,10 +120,12 @@ const createBooking = async (req, res) => {
       paymentStatus: "unpaid",
     });
 
+    /* ---------- Populate ---------- */
+
     const populatedBooking = await Booking.findById(booking._id)
       .populate(
         "car",
-        "brand model year pricePerDay fuelType transmission seats image",
+        "brand model year numberPlate pricePerDay fuelType transmission seats image",
       )
       .populate("user", "name email");
 
@@ -130,6 +144,10 @@ const createBooking = async (req, res) => {
   }
 };
 
+/* =========================================================
+   GET MY BOOKINGS
+========================================================= */
+
 const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({
@@ -137,8 +155,9 @@ const getMyBookings = async (req, res) => {
     })
       .populate(
         "car",
-        "brand model year pricePerDay fuelType transmission seats image",
+        "brand model year numberPlate pricePerDay fuelType transmission seats image",
       )
+      .populate("user", "name email")
       .sort({
         createdAt: -1,
       });
@@ -157,6 +176,10 @@ const getMyBookings = async (req, res) => {
   }
 };
 
+/* =========================================================
+   GET BOOKING BY ID
+========================================================= */
+
 const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -174,7 +197,7 @@ const getBookingById = async (req, res) => {
     })
       .populate(
         "car",
-        "brand model year pricePerDay fuelType transmission seats image",
+        "brand model year numberPlate pricePerDay fuelType transmission seats image",
       )
       .populate("user", "name email");
 
@@ -199,8 +222,22 @@ const getBookingById = async (req, res) => {
   }
 };
 
+/* =========================================================
+   CANCEL BOOKING
+========================================================= */
+
 const cancelBooking = async (req, res) => {
   try {
+    console.log("========================================");
+
+    console.log("CANCEL BOOKING REQUEST RECEIVED");
+
+    console.log("Booking ID:", req.params.id);
+
+    console.log("User ID:", req.user?._id?.toString());
+
+    console.log("========================================");
+
     const { id } = req.params;
 
     if (!id) {
@@ -210,17 +247,29 @@ const cancelBooking = async (req, res) => {
       });
     }
 
+    /* ---------- Find booking ---------- */
+
     const booking = await Booking.findOne({
       _id: id,
       user: req.user._id,
     });
 
     if (!booking) {
+      console.log("Booking not found.");
+
       return res.status(404).json({
         success: false,
         message: "Booking not found",
       });
     }
+
+    console.log("Booking found:", booking._id.toString());
+
+    console.log("Current status:", booking.status);
+
+    console.log("Current payment status:", booking.paymentStatus);
+
+    /* ---------- Already cancelled ---------- */
 
     if (booking.status === "cancelled") {
       return res.status(400).json({
@@ -229,6 +278,8 @@ const cancelBooking = async (req, res) => {
       });
     }
 
+    /* ---------- Completed ---------- */
+
     if (booking.status === "completed") {
       return res.status(400).json({
         success: false,
@@ -236,17 +287,87 @@ const cancelBooking = async (req, res) => {
       });
     }
 
+    /* ---------- Check status ---------- */
+
+    if (!["pending", "confirmed"].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Booking cannot be cancelled because its current status is "${booking.status}".`,
+      });
+    }
+
+    /* =====================================================
+       UPDATE BOOKING
+    ===================================================== */
+
     booking.status = "cancelled";
 
     await booking.save();
 
+    console.log("Booking cancelled successfully:", booking._id.toString());
+
+    /* =====================================================
+       GET BOOKING + USER + CAR
+    ===================================================== */
+
+    const bookingForEmail = await Booking.findById(booking._id)
+      .populate(
+        "car",
+        "brand model year numberPlate pricePerDay fuelType transmission seats image",
+      )
+      .populate("user", "name email");
+
+    console.log("========== CANCELLATION EMAIL DEBUG ==========");
+
+    console.log("Booking:", bookingForEmail?._id?.toString());
+
+    console.log("User:", bookingForEmail?.user);
+
+    console.log("Customer email:", bookingForEmail?.user?.email);
+
+    console.log("Car:", bookingForEmail?.car);
+
+    console.log("==============================================");
+
+    /* =====================================================
+       SEND EMAIL
+    ===================================================== */
+
+    if (bookingForEmail && bookingForEmail.user && bookingForEmail.user.email) {
+      console.log("CALLING CANCELLATION EMAIL FUNCTION...");
+
+      await sendBookingCancellationEmail({
+        user: bookingForEmail.user,
+        booking: bookingForEmail,
+      });
+
+      console.log("CANCELLATION EMAIL FUNCTION FINISHED.");
+    } else {
+      console.log("CANCELLATION EMAIL NOT SENT.");
+
+      console.log("Reason: Customer email not found.");
+    }
+
+    /* =====================================================
+       RESPONSE
+    ===================================================== */
+
     return res.status(200).json({
       success: true,
-      message: "Booking cancelled successfully",
-      booking,
+
+      message:
+        "Booking cancelled successfully. A cancellation email has been sent to your registered email address.",
+
+      booking: bookingForEmail || booking,
     });
   } catch (error) {
-    console.error("Cancel booking error:", error);
+    console.error("========================================");
+
+    console.error("CANCEL BOOKING ERROR:");
+
+    console.error(error);
+
+    console.error("========================================");
 
     return res.status(500).json({
       success: false,
@@ -254,6 +375,10 @@ const cancelBooking = async (req, res) => {
     });
   }
 };
+
+/* =========================================================
+   EXPORTS
+========================================================= */
 
 module.exports = {
   createBooking,

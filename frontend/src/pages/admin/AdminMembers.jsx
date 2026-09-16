@@ -12,12 +12,15 @@ import {
   Loader2,
   AlertCircle,
   ChevronDown,
+  Ban,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
   getAllUsers,
   updateUserRole,
   deleteAdminMember,
+  updateAdminMemberStatus,
 } from "../../services/adminApi";
 
 import { useAuth } from "../../context/AuthContext";
@@ -192,6 +195,75 @@ function AdminMembers() {
     }
   };
 
+  const handleMembershipStatus = async (member) => {
+    const memberId = member?._id || member?.id;
+
+    if (!memberId) {
+      setError("Member ID not found.");
+      return;
+    }
+
+    const currentUserId = currentUser?._id || currentUser?.id;
+
+    if (String(currentUserId) === String(memberId)) {
+      setError("You cannot change your own membership status.");
+      return;
+    }
+
+    const isCurrentlyActive = member?.isActive !== false;
+    const newStatus = !isCurrentlyActive;
+
+    const actionText = newStatus ? "activate" : "cancel";
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${actionText} ${
+        member?.name || "this member"
+      }'s membership?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      // Optimistic UI update
+      setMembers((previous) =>
+        previous.map((item) =>
+          String(item?._id || item?.id) === String(memberId)
+            ? {
+                ...item,
+                isActive: newStatus,
+              }
+            : item,
+        ),
+      );
+
+      await updateAdminMemberStatus(memberId, newStatus, token);
+    } catch (err) {
+      console.error("Update membership status error:", err);
+
+      // Roll back if API fails
+      setMembers((previous) =>
+        previous.map((item) =>
+          String(item?._id || item?.id) === String(memberId)
+            ? {
+                ...item,
+                isActive: isCurrentlyActive,
+              }
+            : item,
+        ),
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update membership status.",
+      );
+    }
+  };
+
   const getRoleConfig = (role) => {
     switch (role) {
       case "admin":
@@ -217,9 +289,7 @@ function AdminMembers() {
     }
   };
 
-  const totalUsers = members.filter(
-    (member) => member?.role === "user",
-  ).length;
+  const totalUsers = members.filter((member) => member?.role === "user").length;
 
   const totalDealers = members.filter(
     (member) => member?.role === "dealer",
@@ -292,12 +362,9 @@ function AdminMembers() {
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw
-                className={`h-4 w-4 ${
-                  refreshing ? "animate-spin" : ""
-                }`}
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
                 aria-hidden="true"
               />
-
               Refresh
             </button>
 
@@ -324,6 +391,7 @@ function AdminMembers() {
 
             <div>
               <p className="font-semibold">Something went wrong</p>
+
               <p className="mt-1 leading-6">{error}</p>
             </div>
           </div>
@@ -346,7 +414,9 @@ function AdminMembers() {
 
           <div className="grid gap-5 sm:grid-cols-3">
             <StatCard title="Users" value={totalUsers} icon={User} />
+
             <StatCard title="Dealers" value={totalDealers} icon={Store} />
+
             <StatCard title="Admins" value={totalAdmins} icon={ShieldCheck} />
           </div>
         </section>
@@ -416,9 +486,7 @@ function AdminMembers() {
             </div>
 
             <h2 className="font-metal mt-5 text-2xl text-foreground">
-              {members.length === 0
-                ? "No Members Yet"
-                : "No Matching Members"}
+              {members.length === 0 ? "No Members Yet" : "No Matching Members"}
             </h2>
 
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
@@ -445,7 +513,7 @@ function AdminMembers() {
               className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:block"
             >
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[820px]">
+                <table className="w-full min-w-[1100px]">
                   <caption className="sr-only">
                     DriveNow member management table
                   </caption>
@@ -470,6 +538,13 @@ function AdminMembers() {
                         scope="col"
                         className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground"
                       >
+                        Status
+                      </th>
+
+                      <th
+                        scope="col"
+                        className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground"
+                      >
                         Joined
                       </th>
 
@@ -487,13 +562,15 @@ function AdminMembers() {
                       const memberId = member?._id || member?.id;
 
                       const roleConfig = getRoleConfig(member?.role);
+
                       const RoleIcon = roleConfig.icon;
 
-                      const currentUserId =
-                        currentUser?._id || currentUser?.id;
+                      const currentUserId = currentUser?._id || currentUser?.id;
 
                       const isCurrentUser =
                         String(currentUserId) === String(memberId);
+
+                      const isActive = member?.isActive !== false;
 
                       return (
                         <tr
@@ -526,10 +603,7 @@ function AdminMembers() {
                               <select
                                 value={member?.role || "user"}
                                 onChange={(event) =>
-                                  handleRoleChange(
-                                    member,
-                                    event.target.value,
-                                  )
+                                  handleRoleChange(member, event.target.value)
                                 }
                                 aria-label={`Change role for ${
                                   member?.name || "member"
@@ -537,9 +611,31 @@ function AdminMembers() {
                                 className="rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-ring focus:ring-4 focus:ring-ring/10"
                               >
                                 <option value="user">User</option>
+
                                 <option value="dealer">Dealer</option>
+
                                 <option value="admin">Admin</option>
                               </select>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-5">
+                            {isActive ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
+                                <CheckCircle2
+                                  className="h-3.5 w-3.5"
+                                  aria-hidden="true"
+                                />
+                                Active
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive">
+                                <Ban
+                                  className="h-3.5 w-3.5"
+                                  aria-hidden="true"
+                                />
+                                Cancelled
+                              </span>
                             )}
                           </td>
 
@@ -553,18 +649,45 @@ function AdminMembers() {
                                 Current account
                               </span>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(member)}
-                                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-destructive/30 px-3 text-xs font-bold text-destructive transition hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                              >
-                                <Trash2
-                                  className="h-3.5 w-3.5"
-                                  aria-hidden="true"
-                                />
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleMembershipStatus(member)}
+                                  className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+                                    isActive
+                                      ? "border-destructive/30 text-destructive hover:bg-destructive/10"
+                                      : "border-success/30 text-success hover:bg-success/10"
+                                  }`}
+                                >
+                                  {isActive ? (
+                                    <Ban
+                                      className="h-3.5 w-3.5"
+                                      aria-hidden="true"
+                                    />
+                                  ) : (
+                                    <CheckCircle2
+                                      className="h-3.5 w-3.5"
+                                      aria-hidden="true"
+                                    />
+                                  )}
 
-                                Delete
-                              </button>
+                                  {isActive
+                                    ? "Cancel Membership"
+                                    : "Activate Membership"}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(member)}
+                                  className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-destructive/30 px-3 text-xs font-bold text-destructive transition hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                >
+                                  <Trash2
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                  />
+                                  Delete
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -576,21 +699,20 @@ function AdminMembers() {
             </section>
 
             {/* Mobile Cards */}
-            <section
-              aria-label="Members list"
-              className="space-y-4 md:hidden"
-            >
+            <section aria-label="Members list" className="space-y-4 md:hidden">
               {filteredMembers.map((member) => {
                 const memberId = member?._id || member?.id;
 
                 const roleConfig = getRoleConfig(member?.role);
+
                 const RoleIcon = roleConfig.icon;
 
-                const currentUserId =
-                  currentUser?._id || currentUser?.id;
+                const currentUserId = currentUser?._id || currentUser?.id;
 
                 const isCurrentUser =
                   String(currentUserId) === String(memberId);
+
+                const isActive = member?.isActive !== false;
 
                 return (
                   <article
@@ -611,15 +733,35 @@ function AdminMembers() {
                       <span
                         className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${roleConfig.className}`}
                       >
-                        <RoleIcon
-                          className="h-3.5 w-3.5"
-                          aria-hidden="true"
-                        />
+                        <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />
 
                         {roleConfig.label}
                       </span>
                     </div>
 
+                    {/* Status */}
+                    <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Membership
+                      </span>
+
+                      {isActive ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+                          <CheckCircle2
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive">
+                          <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                          Cancelled
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Role */}
                     <div className="mt-5">
                       <label
                         htmlFor={`role-${memberId}`}
@@ -638,11 +780,14 @@ function AdminMembers() {
                         className="min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-ring focus:ring-4 focus:ring-ring/10 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                       >
                         <option value="user">User</option>
+
                         <option value="dealer">Dealer</option>
+
                         <option value="admin">Admin</option>
                       </select>
                     </div>
 
+                    {/* Joined */}
                     <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
                       <span className="text-xs font-medium text-muted-foreground">
                         Joined
@@ -658,14 +803,39 @@ function AdminMembers() {
                         This is your current account.
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(member)}
-                        className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 text-sm font-bold text-destructive transition hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        Delete Member
-                      </button>
+                      <div className="mt-4 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => handleMembershipStatus(member)}
+                          className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+                            isActive
+                              ? "border-destructive/30 text-destructive hover:bg-destructive/10"
+                              : "border-success/30 text-success hover:bg-success/10"
+                          }`}
+                        >
+                          {isActive ? (
+                            <Ban className="h-4 w-4" aria-hidden="true" />
+                          ) : (
+                            <CheckCircle2
+                              className="h-4 w-4"
+                              aria-hidden="true"
+                            />
+                          )}
+
+                          {isActive
+                            ? "Cancel Membership"
+                            : "Activate Membership"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(member)}
+                          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 text-sm font-bold text-destructive transition hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          Delete Member
+                        </button>
+                      </div>
                     )}
                   </article>
                 );
@@ -683,9 +853,7 @@ function StatCard({ title, value, icon: Icon }) {
     <article className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            {title}
-          </p>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
 
           <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
             {value}

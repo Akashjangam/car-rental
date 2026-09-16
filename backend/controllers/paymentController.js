@@ -1,9 +1,23 @@
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+
 const Payment = require("../models/payment");
 const Booking = require("../models/Booking");
 
-// ==========================================
-// CREATE DEMO PAYMENT
-// ==========================================
+const { sendBookingConfirmationEmail } = require("../services/emailService");
+
+/* =====================================================
+   RAZORPAY INSTANCE
+===================================================== */
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+/* =====================================================
+   CREATE RAZORPAY PAYMENT ORDER
+===================================================== */
 
 const createPayment = async (req, res) => {
   try {
@@ -16,7 +30,6 @@ const createPayment = async (req, res) => {
       });
     }
 
-    // Find booking
     const booking = await Booking.findById(bookingId);
 
     if (!booking) {
@@ -26,7 +39,8 @@ const createPayment = async (req, res) => {
       });
     }
 
-    // Check ownership
+    /* ---------- Ownership Check ---------- */
+
     if (booking.user && booking.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -34,7 +48,8 @@ const createPayment = async (req, res) => {
       });
     }
 
-    // Cancelled booking
+    /* ---------- Booking Status Checks ---------- */
+
     if (booking.status === "cancelled") {
       return res.status(400).json({
         success: false,
@@ -42,7 +57,13 @@ const createPayment = async (req, res) => {
       });
     }
 
-    // Already paid
+    if (booking.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Completed booking cannot be paid",
+      });
+    }
+
     if (booking.paymentStatus === "paid") {
       return res.status(400).json({
         success: false,
@@ -50,45 +71,250 @@ const createPayment = async (req, res) => {
       });
     }
 
-    // Get booking amount
-    const amount =
-      booking.totalAmount || booking.totalPrice || booking.amount || 0;
+    /* ---------- Amount ---------- */
 
-    if (amount <= 0) {
+    const amount = Number(
+      booking.totalAmount || booking.totalPrice || booking.amount || 0,
+    );
+
+    if (!Number.isFinite(amount) || amount <= 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid booking amount",
       });
     }
 
-    // Generate unique IDs
-    const orderId = `DN_ORDER_${Date.now()}`;
+    /* ---------- Razorpay Configuration ---------- */
 
-    const transactionId = `DN_TXN_${Date.now()}_${Math.floor(
-      Math.random() * 100000,
-    )}`;
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      return res.status(500).json({
+        success: false,
+        message: "Razorpay is not configured on the server",
+      });
+    }
 
-    // Create payment
+    /* ---------- Convert INR to Paise ---------- */
+
+    const amountInPaise = Math.round(amount * 100);
+
+    /* ---------- Create Razorpay Order ---------- */
+
+    const razorpayOrder = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency: "INR",
+
+      receipt: `DN_${booking._id.toString().slice(-12)}`,
+
+      notes: {
+        bookingId: booking._id.toString(),
+        userId: req.user._id.toString(),
+      },
+    });
+
+    /* ---------- Save Payment ---------- */
+
     const payment = await Payment.create({
       booking: booking._id,
       user: req.user._id,
-      orderId,
-      transactionId,
+      orderId: razorpayOrder.id,
       amount,
-      status: "success",
-      paymentMethod: "Demo",
+      status: "pending",
+      paymentMethod: "Razorpay",
     });
 
-    // Update booking
+    return res.status(201).json({
+      success: true,
+
+      message: "Razorpay order created successfully",
+
+      keyId: process.env.RAZORPAY_KEY_ID,
+
+      order: {
+        id: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+      },
+
+      payment: {
+        id: payment._id,
+        orderId: payment.orderId,
+        amount: payment.amount,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod,
+      },
+
+      booking: {
+        id: booking._id,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Create Razorpay order error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to create payment order",
+      error: error.message,
+    });
+  }
+};
+
+/* =====================================================
+   VERIFY RAZORPAY PAYMENT
+===================================================== */
+
+const verifyPayment = async (req, res) => {
+  try {
+    const {
+      bookingId,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
+
+    /* ---------- Validate Request ---------- */
+
+    if (
+      !bookingId ||
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment verification details are required",
+      });
+    }
+
+    /* ---------- Find Booking ---------- */
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    /* ---------- Ownership Check ---------- */
+
+    if (booking.user && booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to verify this payment",
+      });
+    }
+
+    /* ---------- Booking Status Checks ---------- */
+
+    if (booking.status === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled booking cannot be paid",
+      });
+    }
+
+    if (booking.paymentStatus === "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Booking is already paid",
+      });
+    }
+
+    /* ---------- Find Payment ---------- */
+
+    const payment = await Payment.findOne({
+      orderId: razorpay_order_id,
+      booking: booking._id,
+      user: req.user._id,
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment order not found",
+      });
+    }
+
+    /* =================================================
+       VERIFY RAZORPAY SIGNATURE
+    ================================================= */
+
+    const generatedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    /* ---------- Signature Failed ---------- */
+
+    if (generatedSignature !== razorpay_signature) {
+      payment.status = "failed";
+      payment.responseCode = "SIGNATURE_MISMATCH";
+      payment.responseMessage = "Payment signature verification failed";
+
+      await payment.save();
+
+      booking.paymentStatus = "failed";
+
+      await booking.save();
+
+      return res.status(400).json({
+        success: false,
+        message: "Payment verification failed",
+      });
+    }
+
+    /* =================================================
+       PAYMENT SUCCESS
+    ================================================= */
+
+    payment.status = "success";
+    payment.transactionId = razorpay_payment_id;
+    payment.paymentMethod = "Razorpay";
+    payment.responseCode = "SUCCESS";
+    payment.responseMessage = "Payment verified successfully";
+
+    await payment.save();
+
+    /* ---------- Update Booking ---------- */
+
     booking.paymentStatus = "paid";
     booking.status = "confirmed";
     booking.paymentId = payment._id.toString();
 
     await booking.save();
 
-    return res.status(201).json({
+    /* =================================================
+       GET COMPLETE BOOKING FOR EMAIL
+    ================================================= */
+
+    const bookingForEmail = await Booking.findById(booking._id)
+      .populate(
+        "car",
+        "brand model year numberPlate pricePerDay fuelType transmission seats image",
+      )
+      .populate("user", "name email");
+
+    /* =================================================
+       SEND BOOKING CONFIRMATION EMAIL
+    ================================================= */
+
+    await sendBookingConfirmationEmail({
+      user: bookingForEmail.user,
+      booking: bookingForEmail,
+      payment,
+    });
+
+    /* =================================================
+       SUCCESS RESPONSE
+    ================================================= */
+
+    return res.status(200).json({
       success: true,
-      message: "Demo payment successful",
+
+      message: "Payment verified successfully",
 
       payment: {
         id: payment._id,
@@ -106,22 +332,24 @@ const createPayment = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Create payment error:", error);
+    console.error("Verify Razorpay payment error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Payment failed",
+      message: "Payment verification failed",
       error: error.message,
     });
   }
 };
 
-// ==========================================
-// PAYMENT CALLBACK
-// ==========================================
+/* =====================================================
+   RAZORPAY CALLBACK
+===================================================== */
 
 const paymentCallback = async (req, res) => {
   try {
+    console.log("Razorpay callback received");
+
     return res.status(200).json({
       success: true,
       message: "Payment callback received",
@@ -136,9 +364,9 @@ const paymentCallback = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET PAYMENT STATUS
-// ==========================================
+/* =====================================================
+   GET PAYMENT STATUS
+===================================================== */
 
 const getPaymentStatus = async (req, res) => {
   try {
@@ -165,7 +393,8 @@ const getPaymentStatus = async (req, res) => {
       });
     }
 
-    // Check ownership
+    /* ---------- Ownership Check ---------- */
+
     if (payment.user && payment.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -188,8 +417,13 @@ const getPaymentStatus = async (req, res) => {
   }
 };
 
+/* =====================================================
+   EXPORTS
+===================================================== */
+
 module.exports = {
   createPayment,
+  verifyPayment,
   paymentCallback,
   getPaymentStatus,
 };

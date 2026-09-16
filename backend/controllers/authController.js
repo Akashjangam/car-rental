@@ -4,7 +4,9 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const sendPasswordResetEmail = require("../utils/sendEmail");
 
+// =========================================================
 // GENERATE JWT TOKEN
+// =========================================================
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -18,7 +20,9 @@ const generateToken = (user) => {
   );
 };
 
+// =========================================================
 // REGISTER USER
+// =========================================================
 
 const registerUser = async (req, res) => {
   try {
@@ -73,6 +77,7 @@ const registerUser = async (req, res) => {
       email: normalizedEmail,
       password: hashedPassword,
       role: "user",
+      isActive: true,
     });
 
     const token = generateToken(user);
@@ -86,6 +91,7 @@ const registerUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isActive: user.isActive,
       },
     });
   } catch (error) {
@@ -98,7 +104,9 @@ const registerUser = async (req, res) => {
   }
 };
 
+// =========================================================
 // LOGIN USER
+// =========================================================
 
 const loginUser = async (req, res) => {
   try {
@@ -124,6 +132,22 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // =====================================================
+    // CHECK MEMBERSHIP STATUS
+    // =====================================================
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Your membership has been cancelled. Please contact the administrator.",
+      });
+    }
+
+    // =====================================================
+    // CHECK PASSWORD
+    // =====================================================
+
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
@@ -132,6 +156,10 @@ const loginUser = async (req, res) => {
         message: "Invalid email or password",
       });
     }
+
+    // =====================================================
+    // GENERATE TOKEN
+    // =====================================================
 
     const token = generateToken(user);
 
@@ -144,6 +172,7 @@ const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isActive: user.isActive,
       },
     });
   } catch (error) {
@@ -156,7 +185,9 @@ const loginUser = async (req, res) => {
   }
 };
 
+// =========================================================
 // FORGOT PASSWORD
+// =========================================================
 
 const forgotPassword = async (req, res) => {
   try {
@@ -237,7 +268,9 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+// =========================================================
 // RESET PASSWORD
+// =========================================================
 
 const resetPassword = async (req, res) => {
   try {
@@ -272,7 +305,9 @@ const resetPassword = async (req, res) => {
 
     const user = await User.findOne({
       resetPasswordToken: hashedResetToken,
-      resetPasswordExpire: { $gt: new Date() },
+      resetPasswordExpire: {
+        $gt: new Date(),
+      },
     });
 
     if (!user) {
@@ -307,7 +342,9 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// =========================================================
 // GET PROFILE
+// =========================================================
 
 const getProfile = async (req, res) => {
   try {
@@ -327,6 +364,7 @@ const getProfile = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isActive: user.isActive,
       },
     });
   } catch (error) {
@@ -339,7 +377,9 @@ const getProfile = async (req, res) => {
   }
 };
 
+// =========================================================
 // EXPORTS
+// =========================================================
 
 module.exports = {
   registerUser,

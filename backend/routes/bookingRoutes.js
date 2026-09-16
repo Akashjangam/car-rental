@@ -1,62 +1,42 @@
-  const express = require("express");
+const express = require("express");
 
-  const protect = require("../middleware/authMiddleware");
+const protect = require("../middleware/authMiddleware");
 
-  const {
-    createBooking,
-    getMyBookings,
-    getBookingById,
-    cancelBooking,
-  } = require("../controllers/bookingController");
+const {
+  createBooking,
+  getMyBookings,
+  getBookingById,
+  cancelBooking,
+} = require("../controllers/bookingController");
 
-  const router = express.Router();
+const router = express.Router();
 
-  /* ======================================================
-    CREATE BOOKING
-    POST /api/bookings
-  ====================================================== */
+/* ======================================================
+   CREATE BOOKING
+   POST /api/bookings
+====================================================== */
 
-  router.post(
-    "/",
-    protect,
-    createBooking,
-  );
+router.post("/", protect, createBooking);
 
+/* ======================================================
+   GET MY BOOKINGS
+   GET /api/bookings/my-bookings
+====================================================== */
 
-  /* ======================================================
-    GET MY BOOKINGS
-    GET /api/bookings/my-bookings
-  ====================================================== */
+router.get("/my-bookings", protect, getMyBookings);
 
-  router.get(
-    "/my-bookings",
-    protect,
-    getMyBookings,
-  );
+/* ======================================================
+   GET SINGLE BOOKING
+   GET /api/bookings/:id
+====================================================== */
 
+router.get("/:id", protect, getBookingById);
 
-  /* ======================================================
-    GET SINGLE BOOKING
-    GET /api/bookings/:id
-  ====================================================== */
+/* ======================================================
+   CANCEL BOOKING
+   PUT /api/bookings/:id/cancel
+====================================================== */
 
-  router.get(
-    "/:id",
-    protect,
-    getBookingById,
-  );
+router.put("/:id/cancel", protect, cancelBooking);
 
-
-  /* ======================================================
-    CANCEL BOOKING
-    PUT /api/bookings/:id/cancel
-  ====================================================== */
-
-  router.put(
-    "/:id/cancel",
-    protect,
-    cancelBooking,
-  );
-
-
-  module.exports = router;
+module.exports = router;

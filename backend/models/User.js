@@ -27,7 +27,14 @@ const userSchema = new mongoose.Schema(
       default: "user",
     },
 
-    // Password reset fields
+    // Membership status
+    // true  = active member
+    // false = cancelled/inactive member
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
     resetPasswordToken: {
       type: String,
       default: null,
