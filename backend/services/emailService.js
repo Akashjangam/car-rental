@@ -1,12 +1,102 @@
-const RESEND_API_URL = "https://api.resend.com/emails";
+require("dotenv").config();
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-const RESEND_FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || "DriveNow <onboarding@resend.dev>";
+const nodemailer = require("nodemailer");
 
 /* =========================================================
-   HELPERS
+   GMAIL SMTP CONFIGURATION
+========================================================= */
+
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+
+const SMTP_SECURE =
+  String(process.env.SMTP_SECURE).toLowerCase() === "true";
+
+const SMTP_USER = process.env.SMTP_USER;
+
+const SMTP_PASS = process.env.SMTP_PASS;
+
+/* =========================================================
+   CREATE EMAIL TRANSPORTER
+========================================================= */
+
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_SECURE,
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASS,
+  },
+});
+
+/* =========================================================
+   CHECK SMTP CONFIGURATION
+========================================================= */
+
+console.log("========== GMAIL SMTP CONFIG ==========");
+
+console.log(
+  "SMTP_HOST:",
+  SMTP_HOST,
+);
+
+console.log(
+  "SMTP_PORT:",
+  SMTP_PORT,
+);
+
+console.log(
+  "SMTP_SECURE:",
+  SMTP_SECURE,
+);
+
+console.log(
+  "SMTP_USER:",
+  SMTP_USER || "NOT CONFIGURED",
+);
+
+console.log(
+  "SMTP_PASS configured:",
+  Boolean(SMTP_PASS),
+);
+
+console.log(
+  "========================================",
+);
+
+/* =========================================================
+   VERIFY GMAIL SMTP CONNECTION
+========================================================= */
+
+const verifySMTP = async () => {
+  if (!SMTP_USER || !SMTP_PASS) {
+    console.error(
+      "Gmail SMTP verification skipped: SMTP_USER or SMTP_PASS is missing.",
+    );
+
+    return;
+  }
+
+  try {
+    await transporter.verify();
+
+    console.log(
+      "Gmail SMTP connection verified successfully.",
+    );
+  } catch (error) {
+    console.error(
+      "Gmail SMTP verification failed:",
+      error.message,
+    );
+  }
+};
+
+verifySMTP();
+
+/* =========================================================
+   NORMALIZE BOOKING
 ========================================================= */
 
 const normalizeBooking = (input) => {
@@ -43,15 +133,26 @@ const normalizeBooking = (input) => {
     return {
       ...booking,
 
-      user: booking?.user || input?.user || null,
+      user:
+        booking?.user ||
+        input?.user ||
+        null,
 
-      car: booking?.car || input?.car || null,
+      car:
+        booking?.car ||
+        input?.car ||
+        null,
 
-      payment: input?.payment || booking?.payment || null,
+      payment:
+        input?.payment ||
+        booking?.payment ||
+        null,
     };
   }
 
-  return input?.toObject ? input.toObject() : input;
+  return input?.toObject
+    ? input.toObject()
+    : input;
 };
 
 /* =========================================================
@@ -69,14 +170,17 @@ const formatDateTime = (value) => {
     return "N/A";
   }
 
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    },
+  ).format(date);
 };
 
 /* =========================================================
@@ -90,11 +194,14 @@ const formatCurrency = (amount) => {
     return "₹0";
   }
 
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return new Intl.NumberFormat(
+    "en-IN",
+    {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    },
+  ).format(value);
 };
 
 /* =========================================================
@@ -111,59 +218,89 @@ const escapeHtml = (value) => {
 };
 
 /* =========================================================
-   SEND EMAIL USING RESEND
+   SEND EMAIL
 ========================================================= */
 
-const sendEmail = async ({ to, subject, html }) => {
-  if (!RESEND_API_KEY) {
-    console.error("Resend email error: RESEND_API_KEY is not configured.");
+const sendEmail = async ({
+  to,
+  subject,
+  html,
+}) => {
+  if (!SMTP_USER || !SMTP_PASS) {
+    console.error(
+      "Gmail email error: SMTP_USER or SMTP_PASS is not configured.",
+    );
 
     return null;
   }
 
   if (!to) {
-    console.error("Resend email error: recipient email is missing.");
+    console.error(
+      "Gmail email error: recipient email is missing.",
+    );
 
     return null;
   }
 
   try {
-    console.log(`Sending email to ${to} through Resend...`);
+    console.log(
+      `Sending email to ${to} through Gmail SMTP...`,
+    );
 
-    const response = await fetch(RESEND_API_URL, {
-      method: "POST",
-
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-
-      body: JSON.stringify({
-        from: RESEND_FROM_EMAIL,
-
-        to: [to],
-
+    const result =
+      await transporter.sendMail({
+        from: `"DriveNow" <${SMTP_USER}>`,
+        to,
         subject,
-
         html,
-      }),
-    });
+      });
 
-    const data = await response.json();
+    console.log(
+      "Email sent successfully through Gmail SMTP.",
+    );
 
-    if (!response.ok) {
-      console.error("Resend API error:", data);
+    console.log(
+      "Message ID:",
+      result?.messageId || "N/A",
+    );
 
-      return null;
-    }
-
-    console.log("Email sent successfully through Resend.");
-
-    console.log("Resend Email ID:", data?.id || "N/A");
-
-    return data;
+    return result;
   } catch (error) {
-    console.error("Resend email error:", error.message);
+    console.error(
+      "=============================================",
+    );
+
+    console.error(
+      "GMAIL SMTP EMAIL ERROR",
+    );
+
+    console.error(
+      "=============================================",
+    );
+
+    console.error(
+      "Message:",
+      error.message,
+    );
+
+    console.error(
+      "Code:",
+      error.code || "N/A",
+    );
+
+    console.error(
+      "Command:",
+      error.command || "N/A",
+    );
+
+    console.error(
+      "Response:",
+      error.response || "N/A",
+    );
+
+    console.error(
+      "=============================================",
+    );
 
     return null;
   }
@@ -173,7 +310,10 @@ const sendEmail = async ({ to, subject, html }) => {
    COMMON EMAIL LAYOUT
 ========================================================= */
 
-const emailLayout = ({ title, content }) => {
+const emailLayout = ({
+  title,
+  content,
+}) => {
   return `
 <!DOCTYPE html>
 
@@ -299,30 +439,53 @@ const emailLayout = ({ title, content }) => {
    BOOKING CONFIRMATION EMAIL
 ========================================================= */
 
-const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
+const sendBookingConfirmationEmail = async (
+  bookingInput,
+  payment = null,
+) => {
   try {
-    const booking = normalizeBooking(bookingInput);
+    const booking =
+      normalizeBooking(bookingInput);
 
     if (!booking) {
-      console.error("Confirmation email error: booking data is missing.");
+      console.error(
+        "Confirmation email error: booking data is missing.",
+      );
 
       return null;
     }
 
-    const bookingPayment = payment || booking?.payment || null;
+    const bookingPayment =
+      payment ||
+      booking?.payment ||
+      null;
 
-    const customerEmail = booking?.user?.email || booking?.email || "";
+    const customerEmail =
+      booking?.user?.email ||
+      booking?.email ||
+      "";
 
-    const customerName = booking?.user?.name || booking?.name || "Customer";
+    const customerName =
+      booking?.user?.name ||
+      booking?.name ||
+      "Customer";
 
-    const car = booking?.car || {};
+    const car =
+      booking?.car || {};
 
-    const bookingId = booking?._id?.toString?.() || booking?.id || "N/A";
+    const bookingId =
+      booking?._id?.toString?.() ||
+      booking?.id ||
+      "N/A";
 
     const carName =
-      `${car?.brand || ""} ${car?.model || ""}`.trim() || "Vehicle";
+      `${car?.brand || ""} ${car?.model || ""}`.trim() ||
+      "Vehicle";
 
-    const totalAmount = formatCurrency(booking?.totalAmount);
+    const totalAmount =
+      formatCurrency(
+        booking?.totalAmount,
+      );
 
     const razorpayPaymentId =
       bookingPayment?.transactionId ||
@@ -331,34 +494,74 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
       booking?.paymentId ||
       "";
 
-    console.log("========== CONFIRMATION EMAIL DATA ==========");
+    console.log(
+      "========== CONFIRMATION EMAIL DEBUG ==========",
+    );
 
-    console.log("Booking ID:", bookingId);
+    console.log(
+      "Booking ID:",
+      bookingId,
+    );
 
-    console.log("Customer:", customerName, customerEmail);
+    console.log(
+      "Customer:",
+      customerName,
+      customerEmail,
+    );
 
-    console.log("Car:", carName);
+    console.log(
+      "Car:",
+      carName,
+    );
 
-    console.log("Year:", car?.year || "N/A");
+    console.log(
+      "Year:",
+      car?.year || "N/A",
+    );
 
-    console.log("Number Plate:", car?.numberPlate || "N/A");
+    console.log(
+      "Number Plate:",
+      car?.numberPlate || "N/A",
+    );
 
-    console.log("Pickup:", booking?.startDate);
+    console.log(
+      "Pickup:",
+      booking?.startDate,
+    );
 
-    console.log("Return:", booking?.endDate);
+    console.log(
+      "Return:",
+      booking?.endDate,
+    );
 
-    console.log("Total Amount:", booking?.totalAmount);
+    console.log(
+      "Total Amount:",
+      booking?.totalAmount,
+    );
 
-    console.log("Payment Status:", booking?.paymentStatus);
+    console.log(
+      "Payment Status:",
+      booking?.paymentStatus,
+    );
 
-    console.log("Payment ID:", razorpayPaymentId || "N/A");
+    console.log(
+      "Payment ID:",
+      razorpayPaymentId || "N/A",
+    );
 
-    console.log("Booking Status:", booking?.status);
+    console.log(
+      "Booking Status:",
+      booking?.status,
+    );
 
-    console.log("=============================================");
+    console.log(
+      "==============================================",
+    );
 
     if (!customerEmail) {
-      console.error("Confirmation email not sent: customer email missing.");
+      console.error(
+        "Confirmation email not sent: customer email missing.",
+      );
 
       return null;
     }
@@ -415,6 +618,7 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
       >
 
         <tr>
+
           <td
             style="
               padding:11px 0;
@@ -434,10 +638,17 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
           >
             ${escapeHtml(bookingId)}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Car
           </td>
 
@@ -450,50 +661,117 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
           >
             ${escapeHtml(carName)}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Year
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(car?.year || "N/A")}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              car?.year || "N/A",
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Number Plate
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(car?.numberPlate || "N/A")}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              car?.numberPlate || "N/A",
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Pickup
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(formatDateTime(booking?.startDate))}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              formatDateTime(
+                booking?.startDate,
+              ),
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Return
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(formatDateTime(booking?.endDate))}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              formatDateTime(
+                booking?.endDate,
+              ),
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Total Amount
           </td>
 
@@ -504,12 +782,21 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
               color:#111827;
             "
           >
-            ${escapeHtml(totalAmount)}
+            ${escapeHtml(
+              totalAmount,
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Payment Status
           </td>
 
@@ -520,22 +807,47 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
               color:#16a34a;
             "
           >
-            ${escapeHtml(booking?.paymentStatus || "paid")}
+            ${escapeHtml(
+              booking?.paymentStatus ||
+                "paid",
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Payment ID
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(razorpayPaymentId || "N/A")}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              razorpayPaymentId ||
+                "N/A",
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Booking Status
           </td>
 
@@ -546,8 +858,12 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
               color:#0ea5e9;
             "
           >
-            ${escapeHtml(booking?.status || "confirmed")}
+            ${escapeHtml(
+              booking?.status ||
+                "confirmed",
+            )}
           </td>
+
         </tr>
 
       </table>
@@ -567,19 +883,31 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
       </div>
     `;
 
-    return await sendEmail({
-      to: customerEmail,
+    const result =
+      await sendEmail({
+        to: customerEmail,
 
-      subject: "DriveNow - Booking Confirmation",
+        subject:
+          "DriveNow - Booking Confirmation",
 
-      html: emailLayout({
-        title: "Booking Confirmation",
+        html: emailLayout({
+          title:
+            "Booking Confirmation",
 
-        content,
-      }),
-    });
+          content,
+        }),
+      });
+
+    console.log(
+      "CONFIRMATION EMAIL FUNCTION FINISHED.",
+    );
+
+    return result;
   } catch (error) {
-    console.error("Booking confirmation email error:", error);
+    console.error(
+      "Booking confirmation email error:",
+      error,
+    );
 
     return null;
   }
@@ -589,57 +917,115 @@ const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
    BOOKING CANCELLATION EMAIL
 ========================================================= */
 
-const sendBookingCancellationEmail = async (bookingInput) => {
+const sendBookingCancellationEmail = async (
+  bookingInput,
+) => {
   try {
-    const booking = normalizeBooking(bookingInput);
+    const booking =
+      normalizeBooking(bookingInput);
 
     if (!booking) {
-      console.error("Cancellation email error: booking data is missing.");
+      console.error(
+        "Cancellation email error: booking data is missing.",
+      );
 
       return null;
     }
 
-    const customerEmail = booking?.user?.email || booking?.email || "";
+    const customerEmail =
+      booking?.user?.email ||
+      booking?.email ||
+      "";
 
-    const customerName = booking?.user?.name || booking?.name || "Customer";
+    const customerName =
+      booking?.user?.name ||
+      booking?.name ||
+      "Customer";
 
-    const car = booking?.car || {};
+    const car =
+      booking?.car || {};
 
-    const bookingId = booking?._id?.toString?.() || booking?.id || "N/A";
+    const bookingId =
+      booking?._id?.toString?.() ||
+      booking?.id ||
+      "N/A";
 
     const carName =
-      `${car?.brand || ""} ${car?.model || ""}`.trim() || "Vehicle";
+      `${car?.brand || ""} ${car?.model || ""}`.trim() ||
+      "Vehicle";
 
-    const totalAmount = formatCurrency(booking?.totalAmount);
+    const totalAmount =
+      formatCurrency(
+        booking?.totalAmount,
+      );
 
-    const paymentStatus = booking?.paymentStatus || "unpaid";
+    const paymentStatus =
+      booking?.paymentStatus ||
+      "unpaid";
 
-    console.log("========== CANCELLATION EMAIL DATA ==========");
+    console.log(
+      "========== CANCELLATION EMAIL DATA ==========",
+    );
 
-    console.log("Booking ID:", bookingId);
+    console.log(
+      "Booking ID:",
+      bookingId,
+    );
 
-    console.log("Customer:", customerName, customerEmail);
+    console.log(
+      "Customer:",
+      customerName,
+      customerEmail,
+    );
 
-    console.log("Car:", carName);
+    console.log(
+      "Car:",
+      carName,
+    );
 
-    console.log("Year:", car?.year || "N/A");
+    console.log(
+      "Year:",
+      car?.year || "N/A",
+    );
 
-    console.log("Number Plate:", car?.numberPlate || "N/A");
+    console.log(
+      "Number Plate:",
+      car?.numberPlate || "N/A",
+    );
 
-    console.log("Pickup:", booking?.startDate);
+    console.log(
+      "Pickup:",
+      booking?.startDate,
+    );
 
-    console.log("Return:", booking?.endDate);
+    console.log(
+      "Return:",
+      booking?.endDate,
+    );
 
-    console.log("Total Amount:", booking?.totalAmount);
+    console.log(
+      "Total Amount:",
+      booking?.totalAmount,
+    );
 
-    console.log("Payment Status:", paymentStatus);
+    console.log(
+      "Payment Status:",
+      paymentStatus,
+    );
 
-    console.log("Booking Status:", booking?.status);
+    console.log(
+      "Booking Status:",
+      booking?.status,
+    );
 
-    console.log("=============================================");
+    console.log(
+      "=============================================",
+    );
 
     if (!customerEmail) {
-      console.error("Cancellation email not sent: customer email missing.");
+      console.error(
+        "Cancellation email not sent: customer email missing.",
+      );
 
       return null;
     }
@@ -679,6 +1065,7 @@ const sendBookingCancellationEmail = async (bookingInput) => {
           color:#9a3412;
         "
       >
+
         <strong>
           Booking cancelled
         </strong>
@@ -686,6 +1073,7 @@ const sendBookingCancellationEmail = async (bookingInput) => {
         <br />
 
         Your reservation is no longer active.
+
       </div>
 
       <table
@@ -697,6 +1085,7 @@ const sendBookingCancellationEmail = async (bookingInput) => {
       >
 
         <tr>
+
           <td
             style="
               padding:11px 0;
@@ -716,10 +1105,17 @@ const sendBookingCancellationEmail = async (bookingInput) => {
           >
             ${escapeHtml(bookingId)}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Car
           </td>
 
@@ -732,50 +1128,117 @@ const sendBookingCancellationEmail = async (bookingInput) => {
           >
             ${escapeHtml(carName)}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Year
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(car?.year || "N/A")}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              car?.year || "N/A",
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Number Plate
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(car?.numberPlate || "N/A")}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              car?.numberPlate || "N/A",
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Pickup
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(formatDateTime(booking?.startDate))}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              formatDateTime(
+                booking?.startDate,
+              ),
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Return
           </td>
 
-          <td style="padding:11px 0;color:#111827;">
-            ${escapeHtml(formatDateTime(booking?.endDate))}
+          <td
+            style="
+              padding:11px 0;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(
+              formatDateTime(
+                booking?.endDate,
+              ),
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Total Amount
           </td>
 
@@ -786,12 +1249,21 @@ const sendBookingCancellationEmail = async (bookingInput) => {
               color:#111827;
             "
           >
-            ${escapeHtml(totalAmount)}
+            ${escapeHtml(
+              totalAmount,
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Payment Status
           </td>
 
@@ -802,12 +1274,21 @@ const sendBookingCancellationEmail = async (bookingInput) => {
               color:#111827;
             "
           >
-            ${escapeHtml(paymentStatus)}
+            ${escapeHtml(
+              paymentStatus,
+            )}
           </td>
+
         </tr>
 
         <tr>
-          <td style="padding:11px 0;color:#64748b;">
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+            "
+          >
             Booking Status
           </td>
 
@@ -820,6 +1301,7 @@ const sendBookingCancellationEmail = async (bookingInput) => {
           >
             Cancelled
           </td>
+
         </tr>
 
       </table>
@@ -841,23 +1323,31 @@ const sendBookingCancellationEmail = async (bookingInput) => {
       </div>
     `;
 
-    const result = await sendEmail({
-      to: customerEmail,
+    const result =
+      await sendEmail({
+        to: customerEmail,
 
-      subject: "DriveNow - Booking Cancellation",
+        subject:
+          "DriveNow - Booking Cancellation",
 
-      html: emailLayout({
-        title: "Booking Cancellation",
+        html: emailLayout({
+          title:
+            "Booking Cancellation",
 
-        content,
-      }),
-    });
+          content,
+        }),
+      });
 
-    console.log("CANCELLATION EMAIL FUNCTION FINISHED.");
+    console.log(
+      "CANCELLATION EMAIL FUNCTION FINISHED.",
+    );
 
     return result;
   } catch (error) {
-    console.error("Booking cancellation email error:", error);
+    console.error(
+      "Booking cancellation email error:",
+      error,
+    );
 
     return null;
   }

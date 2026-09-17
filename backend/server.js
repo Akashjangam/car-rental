@@ -1,10 +1,9 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const path = require("path");
 const multer = require("multer");
-
-dotenv.config();
 
 const connectDB = require("./config/db");
 
@@ -113,21 +112,6 @@ app.get("/", (req, res) => {
    AUTOMATIC BOOKING COMPLETION
 ===================================================== */
 
-/*
-  Confirmed + paid bookings automatically become
-  completed after their return date/time has passed.
-
-  Example:
-
-  confirmed + paid
-        ↓
-  returnDate reached
-        ↓
-     completed
-        ↓
-  customer can review
-*/
-
 const completeExpiredBookings = async () => {
   try {
     const now = new Date();
@@ -135,11 +119,14 @@ const completeExpiredBookings = async () => {
     const result = await Booking.updateMany(
       {
         status: "confirmed",
+
         paymentStatus: "paid",
+
         endDate: {
           $lte: now,
         },
       },
+
       {
         $set: {
           status: "completed",
@@ -166,11 +153,15 @@ const completeExpiredBookings = async () => {
 
 app.use((err, req, res, next) => {
   console.error("========================================");
+
   console.error("GLOBAL ERROR");
+
   console.error("========================================");
 
   console.error("Name:", err.name);
+
   console.error("Message:", err.message);
+
   console.error("Error:", err);
 
   console.error("========================================");
@@ -218,14 +209,16 @@ const startServer = async () => {
 
     /*
       Run once immediately after server starts.
-      This catches any bookings that expired while
+      This catches bookings that expired while
       the server was stopped.
     */
+
     await completeExpiredBookings();
 
     /*
       Check every 60 seconds.
     */
+
     setInterval(completeExpiredBookings, 60 * 1000);
 
     app.listen(PORT, "0.0.0.0", () => {
