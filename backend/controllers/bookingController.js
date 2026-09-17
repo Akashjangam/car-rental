@@ -1,7 +1,299 @@
+const Razorpay = require("razorpay");
+
 const Booking = require("../models/Booking");
 const Car = require("../models/Car");
+const Payment = require("../models/payment");
 
 const { sendBookingCancellationEmail } = require("../services/emailService");
+
+/* =========================================================
+   RAZORPAY CONFIGURATION
+========================================================= */
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+/* =========================================================
+   REFUND BOOKING PAYMENT
+========================================================= */
+
+const refundBookingPayment = async (booking) => {
+  try {
+    console.log("========================================");
+    console.log("BOOKING REFUND REQUEST");
+    console.log("Booking ID:", booking._id.toString());
+    console.log("========================================");
+
+    /* ---------- Check Razorpay configuration ---------- */
+
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      throw new Error("Razorpay is not configured on the server");
+    }
+
+    /* ---------- Find successful payment ---------- */
+
+    const payment = await Payment.findOne({
+      booking: booking._id,
+      status: "success",
+    });
+
+    if (!payment) {
+      throw new Error(
+        "Paid booking payment record was not found. Refund cannot be processed.",
+      );
+    }
+
+    console.log("Payment ID:", payment._id.toString());
+    console.log("Razorpay Payment ID:", payment.transactionId);
+    console.log("Payment amount:", payment.amount);
+
+    /* ---------- Check Razorpay payment ID ---------- */
+
+    if (!payment.transactionId) {
+      throw new Error(
+        "Razorpay payment ID is missing. Refund cannot be processed.",
+      );
+    }
+
+    /* =====================================================
+       CHECK IF REFUND ALREADY EXISTS
+    ===================================================== */
+
+    let refundsResponse;
+
+    try {
+      refundsResponse = await razorpay.payments.fetchMultipleRefund(
+        payment.transactionId,
+      );
+    } catch (error) {
+      console.error(
+        "Failed to check existing Razorpay refunds:",
+        error.message,
+      );
+
+      throw new Error("Unable to verify existing Razorpay refund status.");
+    }
+
+    const refunds = refundsResponse?.items || [];
+
+    console.log("Existing Razorpay refunds:", refunds.length);
+
+    /* ---------- Find an existing refund ---------- */
+
+    if (refunds.length > 0) {
+      const latestRefund = refunds[0];
+
+      console.log("Existing refund found:", latestRefund.id);
+
+      console.log("Existing refund status:", latestRefund.status);
+
+      /* ---------- Already processed ---------- */
+
+      if (latestRefund.status === "processed") {
+        payment.refundStatus = "processed";
+        payment.refundId = latestRefund.id;
+        payment.refundAmount = Number(latestRefund.amount || 0) / 100;
+        payment.refundedAt = latestRefund.created_at
+          ? new Date(latestRefund.created_at * 1000)
+          : new Date();
+
+        await payment.save();
+
+        console.log("Refund was already processed. Local payment updated.");
+
+        return {
+          payment,
+          refund: latestRefund,
+          alreadyRefunded: true,
+        };
+      }
+
+      /* ---------- Refund pending/processing ---------- */
+
+      if (
+        latestRefund.status === "pending" ||
+        latestRefund.status === "initiated" ||
+        latestRefund.status === "processing"
+      ) {
+        payment.refundStatus = "pending";
+        payment.refundId = latestRefund.id;
+        payment.refundAmount = Number(latestRefund.amount || 0) / 100;
+
+        await payment.save();
+
+        throw new Error(
+          "A Razorpay refund is already in progress for this payment. Please wait for it to complete.",
+        );
+      }
+
+      /* ---------- Failed refund ---------- */
+
+      if (latestRefund.status === "failed") {
+        console.log("Previous refund failed. A new refund will be attempted.");
+      }
+    }
+
+    /* =====================================================
+       CALCULATE FULL REFUND AMOUNT
+    ===================================================== */
+
+    const refundAmount = Number(payment.amount || booking.totalAmount || 0);
+
+    if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+      throw new Error("Invalid payment amount. Refund cannot be processed.");
+    }
+
+    const amountInPaise = Math.round(refundAmount * 100);
+
+    console.log("Refund amount:", refundAmount);
+
+    console.log("Refund amount in paise:", amountInPaise);
+
+    /* =====================================================
+       CREATE RAZORPAY REFUND
+    ===================================================== */
+
+    payment.refundStatus = "pending";
+    await payment.save();
+
+    console.log("Creating Razorpay refund...");
+
+    let refund;
+
+    try {
+      refund = await razorpay.payments.refund(payment.transactionId, {
+        amount: amountInPaise,
+        speed: "normal",
+        notes: {
+          bookingId: booking._id.toString(),
+          reason: "Booking cancelled by customer",
+        },
+        receipt: `refund_${booking._id.toString().slice(-20)}`,
+      });
+    } catch (refundError) {
+      console.error("Razorpay refund creation failed:", refundError.message);
+
+      /*
+       * Razorpay can return an error if the payment was already
+       * refunded between our check and refund creation.
+       *
+       * Check Razorpay one more time before declaring failure.
+       */
+
+      try {
+        const latestRefunds = await razorpay.payments.fetchMultipleRefund(
+          payment.transactionId,
+        );
+
+        const latestItems = latestRefunds?.items || [];
+
+        if (latestItems.length > 0) {
+          const latestRefund = latestItems[0];
+
+          if (
+            latestRefund.status === "processed" ||
+            latestRefund.status === "pending" ||
+            latestRefund.status === "initiated" ||
+            latestRefund.status === "processing"
+          ) {
+            payment.refundStatus =
+              latestRefund.status === "processed" ? "processed" : "pending";
+
+            payment.refundId = latestRefund.id;
+
+            payment.refundAmount = Number(latestRefund.amount || 0) / 100;
+
+            if (latestRefund.status === "processed") {
+              payment.refundedAt = latestRefund.created_at
+                ? new Date(latestRefund.created_at * 1000)
+                : new Date();
+            }
+
+            await payment.save();
+
+            if (latestRefund.status === "processed") {
+              return {
+                payment,
+                refund: latestRefund,
+                alreadyRefunded: true,
+              };
+            }
+
+            throw new Error(
+              "A Razorpay refund is already in progress for this payment.",
+            );
+          }
+        }
+      } catch (syncError) {
+        /*
+         * If this is our own refund-in-progress message,
+         * preserve it. Otherwise use the original error.
+         */
+        if (
+          syncError.message &&
+          syncError.message.includes("refund is already in progress")
+        ) {
+          throw syncError;
+        }
+      }
+
+      payment.refundStatus = "failed";
+      payment.responseCode = refundError.code || "REFUND_FAILED";
+      payment.responseMessage = refundError.message || "Razorpay refund failed";
+
+      await payment.save();
+
+      throw new Error(
+        `Razorpay refund failed: ${
+          refundError.message || "Unknown refund error"
+        }`,
+      );
+    }
+
+    /* =====================================================
+       SAVE REFUND DETAILS
+    ===================================================== */
+
+    payment.refundStatus =
+      refund.status === "processed" ? "processed" : "pending";
+
+    payment.refundId = refund.id;
+
+    payment.refundAmount = Number(refund.amount || 0) / 100;
+
+    if (refund.status === "processed") {
+      payment.refundedAt = refund.created_at
+        ? new Date(refund.created_at * 1000)
+        : new Date();
+    }
+
+    payment.responseCode = "REFUND_CREATED";
+
+    payment.responseMessage = "Razorpay refund created successfully";
+
+    await payment.save();
+
+    console.log("Razorpay refund created:", refund.id);
+
+    console.log("Refund status:", refund.status);
+
+    console.log("Refund amount:", Number(refund.amount || 0) / 100);
+
+    console.log("========================================");
+
+    return {
+      payment,
+      refund,
+      alreadyRefunded: false,
+    };
+  } catch (error) {
+    console.error("Refund booking payment error:", error.message);
+
+    throw error;
+  }
+};
 
 /* =========================================================
    CREATE BOOKING
@@ -78,15 +370,12 @@ const createBooking = async (req, res) => {
 
     const overlappingBooking = await Booking.findOne({
       car: carId,
-
       status: {
         $in: ["pending", "confirmed"],
       },
-
       startDate: {
         $lt: end,
       },
-
       endDate: {
         $gt: start,
       },
@@ -226,18 +515,15 @@ const getBookingById = async (req, res) => {
 
 /* =========================================================
    CANCEL BOOKING
+   CUSTOMER CANCELLATION + AUTOMATIC REFUND
 ========================================================= */
 
 const cancelBooking = async (req, res) => {
   try {
     console.log("========================================");
-
     console.log("CANCEL BOOKING REQUEST RECEIVED");
-
     console.log("Booking ID:", req.params.id);
-
     console.log("User ID:", req.user?._id?.toString());
-
     console.log("========================================");
 
     const { id } = req.params;
@@ -299,7 +585,43 @@ const cancelBooking = async (req, res) => {
     }
 
     /* =====================================================
-       UPDATE BOOKING
+       PAID BOOKING
+       REFUND FIRST
+    ===================================================== */
+
+    let refundResult = null;
+
+    if (booking.paymentStatus === "paid") {
+      console.log("PAID BOOKING DETECTED.");
+
+      console.log("Starting automatic Razorpay refund...");
+
+      try {
+        refundResult = await refundBookingPayment(booking);
+
+        console.log("Refund completed successfully.");
+      } catch (refundError) {
+        console.error("Refund failed:", refundError.message);
+
+        /*
+         * IMPORTANT:
+         * Do NOT cancel the booking if the refund
+         * could not be processed.
+         */
+
+        return res.status(400).json({
+          success: false,
+          message:
+            refundError.message ||
+            "Payment refund failed. Booking was not cancelled.",
+          refundFailed: true,
+        });
+      }
+    }
+
+    /* =====================================================
+       CANCEL BOOKING
+       Only happens after successful refund for paid bookings
     ===================================================== */
 
     booking.status = "cancelled";
@@ -337,6 +659,17 @@ const cancelBooking = async (req, res) => {
 
     console.log("Return:", bookingForEmail?.endDate);
 
+    if (refundResult?.refund) {
+      console.log("Refund ID:", refundResult.refund.id);
+
+      console.log("Refund status:", refundResult.refund.status);
+
+      console.log(
+        "Refund amount:",
+        Number(refundResult.refund.amount || 0) / 100,
+      );
+    }
+
     console.log("==============================================");
 
     /* =====================================================
@@ -347,26 +680,8 @@ const cancelBooking = async (req, res) => {
       console.log("CALLING CANCELLATION EMAIL FUNCTION...");
 
       /*
-        IMPORTANT:
-        Pass the populated booking directly.
-
-        Do NOT do:
-
-        {
-          user: bookingForEmail.user,
-          booking: bookingForEmail
-        }
-
-        because emailService expects:
-
-        booking.user
-        booking.car
-        booking._id
-        booking.totalAmount
-        booking.startDate
-        booking.endDate
-        booking.paymentStatus
-      */
+       * Pass the populated booking directly.
+       */
 
       await sendBookingCancellationEmail(bookingForEmail);
 
@@ -381,11 +696,36 @@ const cancelBooking = async (req, res) => {
        RESPONSE
     ===================================================== */
 
+    const wasPaid = booking.paymentStatus === "paid";
+
+    let responseMessage;
+
+    if (wasPaid) {
+      if (
+        refundResult?.refund?.status === "processed" ||
+        refundResult?.alreadyRefunded
+      ) {
+        responseMessage =
+          "Booking cancelled and payment refunded successfully.";
+      } else {
+        responseMessage =
+          "Booking cancelled successfully. Your payment refund has been initiated.";
+      }
+    } else {
+      responseMessage = "Booking cancelled successfully.";
+    }
+
     return res.status(200).json({
       success: true,
+      message: responseMessage,
 
-      message:
-        "Booking cancelled successfully. A cancellation email has been sent to your registered email address.",
+      refund: refundResult?.refund
+        ? {
+            id: refundResult.refund.id,
+            status: refundResult.refund.status,
+            amount: Number(refundResult.refund.amount || 0) / 100,
+          }
+        : null,
 
       booking: bookingForEmail || booking,
     });
