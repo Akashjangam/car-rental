@@ -1,99 +1,123 @@
 require("dotenv").config();
 
-const nodemailer = require("nodemailer");
-
 /* =========================================================
-   GMAIL SMTP CONFIGURATION
+   BREVO EMAIL API CONFIGURATION
 ========================================================= */
 
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
-const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
 
-const SMTP_SECURE =
-  String(process.env.SMTP_SECURE).toLowerCase() === "true";
+const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL;
 
-const SMTP_USER = process.env.SMTP_USER;
-
-const SMTP_PASS = process.env.SMTP_PASS;
+const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || "DriveNow";
 
 /* =========================================================
-   CREATE EMAIL TRANSPORTER
+   CHECK BREVO CONFIGURATION
 ========================================================= */
 
-const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: SMTP_SECURE,
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS,
-  },
-});
+console.log("========== BREVO EMAIL CONFIG ==========");
+
+console.log("BREVO_API_KEY configured:", Boolean(BREVO_API_KEY));
+
+console.log("BREVO_FROM_EMAIL:", BREVO_FROM_EMAIL || "NOT CONFIGURED");
+
+console.log("BREVO_FROM_NAME:", BREVO_FROM_NAME);
+
+console.log("========================================");
 
 /* =========================================================
-   CHECK SMTP CONFIGURATION
+   SEND EMAIL THROUGH BREVO HTTPS API
 ========================================================= */
 
-console.log("========== GMAIL SMTP CONFIG ==========");
+const sendEmail = async ({ to, subject, html }) => {
+  if (!BREVO_API_KEY) {
+    console.error("Brevo email error: BREVO_API_KEY is not configured.");
 
-console.log(
-  "SMTP_HOST:",
-  SMTP_HOST,
-);
+    return null;
+  }
 
-console.log(
-  "SMTP_PORT:",
-  SMTP_PORT,
-);
+  if (!BREVO_FROM_EMAIL) {
+    console.error("Brevo email error: BREVO_FROM_EMAIL is not configured.");
 
-console.log(
-  "SMTP_SECURE:",
-  SMTP_SECURE,
-);
+    return null;
+  }
 
-console.log(
-  "SMTP_USER:",
-  SMTP_USER || "NOT CONFIGURED",
-);
+  if (!to) {
+    console.error("Brevo email error: recipient email is missing.");
 
-console.log(
-  "SMTP_PASS configured:",
-  Boolean(SMTP_PASS),
-);
-
-console.log(
-  "========================================",
-);
-
-/* =========================================================
-   VERIFY GMAIL SMTP CONNECTION
-========================================================= */
-
-const verifySMTP = async () => {
-  if (!SMTP_USER || !SMTP_PASS) {
-    console.error(
-      "Gmail SMTP verification skipped: SMTP_USER or SMTP_PASS is missing.",
-    );
-
-    return;
+    return null;
   }
 
   try {
-    await transporter.verify();
+    console.log(`Sending email to ${to} through Brevo HTTPS API...`);
 
-    console.log(
-      "Gmail SMTP connection verified successfully.",
-    );
+    const response = await fetch(BREVO_API_URL, {
+      method: "POST",
+
+      headers: {
+        accept: "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+      },
+
+      body: JSON.stringify({
+        sender: {
+          name: BREVO_FROM_NAME,
+          email: BREVO_FROM_EMAIL,
+        },
+
+        to: [
+          {
+            email: to,
+          },
+        ],
+
+        subject,
+
+        htmlContent: html,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error("=============================================");
+
+      console.error("BREVO EMAIL ERROR");
+
+      console.error("=============================================");
+
+      console.error("HTTP Status:", response.status);
+
+      console.error("Response:", data);
+
+      console.error("=============================================");
+
+      return null;
+    }
+
+    console.log("Email sent successfully through Brevo HTTPS API.");
+
+    console.log("Message ID:", data?.messageId || "N/A");
+
+    return data;
   } catch (error) {
-    console.error(
-      "Gmail SMTP verification failed:",
-      error.message,
-    );
+    console.error("=============================================");
+
+    console.error("BREVO EMAIL CONNECTION ERROR");
+
+    console.error("=============================================");
+
+    console.error("Message:", error.message);
+
+    console.error("Code:", error.code || "N/A");
+
+    console.error("=============================================");
+
+    return null;
   }
 };
-
-verifySMTP();
 
 /* =========================================================
    NORMALIZE BOOKING
@@ -133,26 +157,15 @@ const normalizeBooking = (input) => {
     return {
       ...booking,
 
-      user:
-        booking?.user ||
-        input?.user ||
-        null,
+      user: booking?.user || input?.user || null,
 
-      car:
-        booking?.car ||
-        input?.car ||
-        null,
+      car: booking?.car || input?.car || null,
 
-      payment:
-        input?.payment ||
-        booking?.payment ||
-        null,
+      payment: input?.payment || booking?.payment || null,
     };
   }
 
-  return input?.toObject
-    ? input.toObject()
-    : input;
+  return input?.toObject ? input.toObject() : input;
 };
 
 /* =========================================================
@@ -170,17 +183,14 @@ const formatDateTime = (value) => {
     return "N/A";
   }
 
-  return new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    },
-  ).format(date);
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
 };
 
 /* =========================================================
@@ -194,14 +204,11 @@ const formatCurrency = (amount) => {
     return "₹0";
   }
 
-  return new Intl.NumberFormat(
-    "en-IN",
-    {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    },
-  ).format(value);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
 };
 
 /* =========================================================
@@ -218,102 +225,10 @@ const escapeHtml = (value) => {
 };
 
 /* =========================================================
-   SEND EMAIL
-========================================================= */
-
-const sendEmail = async ({
-  to,
-  subject,
-  html,
-}) => {
-  if (!SMTP_USER || !SMTP_PASS) {
-    console.error(
-      "Gmail email error: SMTP_USER or SMTP_PASS is not configured.",
-    );
-
-    return null;
-  }
-
-  if (!to) {
-    console.error(
-      "Gmail email error: recipient email is missing.",
-    );
-
-    return null;
-  }
-
-  try {
-    console.log(
-      `Sending email to ${to} through Gmail SMTP...`,
-    );
-
-    const result =
-      await transporter.sendMail({
-        from: `"DriveNow" <${SMTP_USER}>`,
-        to,
-        subject,
-        html,
-      });
-
-    console.log(
-      "Email sent successfully through Gmail SMTP.",
-    );
-
-    console.log(
-      "Message ID:",
-      result?.messageId || "N/A",
-    );
-
-    return result;
-  } catch (error) {
-    console.error(
-      "=============================================",
-    );
-
-    console.error(
-      "GMAIL SMTP EMAIL ERROR",
-    );
-
-    console.error(
-      "=============================================",
-    );
-
-    console.error(
-      "Message:",
-      error.message,
-    );
-
-    console.error(
-      "Code:",
-      error.code || "N/A",
-    );
-
-    console.error(
-      "Command:",
-      error.command || "N/A",
-    );
-
-    console.error(
-      "Response:",
-      error.response || "N/A",
-    );
-
-    console.error(
-      "=============================================",
-    );
-
-    return null;
-  }
-};
-
-/* =========================================================
    COMMON EMAIL LAYOUT
 ========================================================= */
 
-const emailLayout = ({
-  title,
-  content,
-}) => {
+const emailLayout = ({ title, content }) => {
   return `
 <!DOCTYPE html>
 
@@ -439,53 +354,30 @@ const emailLayout = ({
    BOOKING CONFIRMATION EMAIL
 ========================================================= */
 
-const sendBookingConfirmationEmail = async (
-  bookingInput,
-  payment = null,
-) => {
+const sendBookingConfirmationEmail = async (bookingInput, payment = null) => {
   try {
-    const booking =
-      normalizeBooking(bookingInput);
+    const booking = normalizeBooking(bookingInput);
 
     if (!booking) {
-      console.error(
-        "Confirmation email error: booking data is missing.",
-      );
+      console.error("Confirmation email error: booking data is missing.");
 
       return null;
     }
 
-    const bookingPayment =
-      payment ||
-      booking?.payment ||
-      null;
+    const bookingPayment = payment || booking?.payment || null;
 
-    const customerEmail =
-      booking?.user?.email ||
-      booking?.email ||
-      "";
+    const customerEmail = booking?.user?.email || booking?.email || "";
 
-    const customerName =
-      booking?.user?.name ||
-      booking?.name ||
-      "Customer";
+    const customerName = booking?.user?.name || booking?.name || "Customer";
 
-    const car =
-      booking?.car || {};
+    const car = booking?.car || {};
 
-    const bookingId =
-      booking?._id?.toString?.() ||
-      booking?.id ||
-      "N/A";
+    const bookingId = booking?._id?.toString?.() || booking?.id || "N/A";
 
     const carName =
-      `${car?.brand || ""} ${car?.model || ""}`.trim() ||
-      "Vehicle";
+      `${car?.brand || ""} ${car?.model || ""}`.trim() || "Vehicle";
 
-    const totalAmount =
-      formatCurrency(
-        booking?.totalAmount,
-      );
+    const totalAmount = formatCurrency(booking?.totalAmount);
 
     const razorpayPaymentId =
       bookingPayment?.transactionId ||
@@ -494,74 +386,34 @@ const sendBookingConfirmationEmail = async (
       booking?.paymentId ||
       "";
 
-    console.log(
-      "========== CONFIRMATION EMAIL DEBUG ==========",
-    );
+    console.log("========== CONFIRMATION EMAIL DEBUG ==========");
 
-    console.log(
-      "Booking ID:",
-      bookingId,
-    );
+    console.log("Booking ID:", bookingId);
 
-    console.log(
-      "Customer:",
-      customerName,
-      customerEmail,
-    );
+    console.log("Customer:", customerName, customerEmail);
 
-    console.log(
-      "Car:",
-      carName,
-    );
+    console.log("Car:", carName);
 
-    console.log(
-      "Year:",
-      car?.year || "N/A",
-    );
+    console.log("Year:", car?.year || "N/A");
 
-    console.log(
-      "Number Plate:",
-      car?.numberPlate || "N/A",
-    );
+    console.log("Number Plate:", car?.numberPlate || "N/A");
 
-    console.log(
-      "Pickup:",
-      booking?.startDate,
-    );
+    console.log("Pickup:", booking?.startDate);
 
-    console.log(
-      "Return:",
-      booking?.endDate,
-    );
+    console.log("Return:", booking?.endDate);
 
-    console.log(
-      "Total Amount:",
-      booking?.totalAmount,
-    );
+    console.log("Total Amount:", booking?.totalAmount);
 
-    console.log(
-      "Payment Status:",
-      booking?.paymentStatus,
-    );
+    console.log("Payment Status:", booking?.paymentStatus);
 
-    console.log(
-      "Payment ID:",
-      razorpayPaymentId || "N/A",
-    );
+    console.log("Payment ID:", razorpayPaymentId || "N/A");
 
-    console.log(
-      "Booking Status:",
-      booking?.status,
-    );
+    console.log("Booking Status:", booking?.status);
 
-    console.log(
-      "==============================================",
-    );
+    console.log("==============================================");
 
     if (!customerEmail) {
-      console.error(
-        "Confirmation email not sent: customer email missing.",
-      );
+      console.error("Confirmation email not sent: customer email missing.");
 
       return null;
     }
@@ -600,6 +452,7 @@ const sendBookingConfirmationEmail = async (
           color:#166534;
         "
       >
+
         <strong>
           Payment successful
         </strong>
@@ -607,6 +460,7 @@ const sendBookingConfirmationEmail = async (
         <br />
 
         Your vehicle reservation is confirmed.
+
       </div>
 
       <table
@@ -681,9 +535,7 @@ const sendBookingConfirmationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              car?.year || "N/A",
-            )}
+            ${escapeHtml(car?.year || "N/A")}
           </td>
 
         </tr>
@@ -705,9 +557,7 @@ const sendBookingConfirmationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              car?.numberPlate || "N/A",
-            )}
+            ${escapeHtml(car?.numberPlate || "N/A")}
           </td>
 
         </tr>
@@ -729,11 +579,7 @@ const sendBookingConfirmationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              formatDateTime(
-                booking?.startDate,
-              ),
-            )}
+            ${escapeHtml(formatDateTime(booking?.startDate))}
           </td>
 
         </tr>
@@ -755,11 +601,7 @@ const sendBookingConfirmationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              formatDateTime(
-                booking?.endDate,
-              ),
-            )}
+            ${escapeHtml(formatDateTime(booking?.endDate))}
           </td>
 
         </tr>
@@ -782,9 +624,7 @@ const sendBookingConfirmationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              totalAmount,
-            )}
+            ${escapeHtml(totalAmount)}
           </td>
 
         </tr>
@@ -807,10 +647,7 @@ const sendBookingConfirmationEmail = async (
               color:#16a34a;
             "
           >
-            ${escapeHtml(
-              booking?.paymentStatus ||
-                "paid",
-            )}
+            ${escapeHtml(booking?.paymentStatus || "paid")}
           </td>
 
         </tr>
@@ -832,10 +669,7 @@ const sendBookingConfirmationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              razorpayPaymentId ||
-                "N/A",
-            )}
+            ${escapeHtml(razorpayPaymentId || "N/A")}
           </td>
 
         </tr>
@@ -858,10 +692,7 @@ const sendBookingConfirmationEmail = async (
               color:#0ea5e9;
             "
           >
-            ${escapeHtml(
-              booking?.status ||
-                "confirmed",
-            )}
+            ${escapeHtml(booking?.status || "confirmed")}
           </td>
 
         </tr>
@@ -883,31 +714,23 @@ const sendBookingConfirmationEmail = async (
       </div>
     `;
 
-    const result =
-      await sendEmail({
-        to: customerEmail,
+    const result = await sendEmail({
+      to: customerEmail,
 
-        subject:
-          "DriveNow - Booking Confirmation",
+      subject: "DriveNow - Booking Confirmation",
 
-        html: emailLayout({
-          title:
-            "Booking Confirmation",
+      html: emailLayout({
+        title: "Booking Confirmation",
 
-          content,
-        }),
-      });
+        content,
+      }),
+    });
 
-    console.log(
-      "CONFIRMATION EMAIL FUNCTION FINISHED.",
-    );
+    console.log("CONFIRMATION EMAIL FUNCTION FINISHED.");
 
     return result;
   } catch (error) {
-    console.error(
-      "Booking confirmation email error:",
-      error,
-    );
+    console.error("Booking confirmation email error:", error);
 
     return null;
   }
@@ -917,115 +740,57 @@ const sendBookingConfirmationEmail = async (
    BOOKING CANCELLATION EMAIL
 ========================================================= */
 
-const sendBookingCancellationEmail = async (
-  bookingInput,
-) => {
+const sendBookingCancellationEmail = async (bookingInput) => {
   try {
-    const booking =
-      normalizeBooking(bookingInput);
+    const booking = normalizeBooking(bookingInput);
 
     if (!booking) {
-      console.error(
-        "Cancellation email error: booking data is missing.",
-      );
+      console.error("Cancellation email error: booking data is missing.");
 
       return null;
     }
 
-    const customerEmail =
-      booking?.user?.email ||
-      booking?.email ||
-      "";
+    const customerEmail = booking?.user?.email || booking?.email || "";
 
-    const customerName =
-      booking?.user?.name ||
-      booking?.name ||
-      "Customer";
+    const customerName = booking?.user?.name || booking?.name || "Customer";
 
-    const car =
-      booking?.car || {};
+    const car = booking?.car || {};
 
-    const bookingId =
-      booking?._id?.toString?.() ||
-      booking?.id ||
-      "N/A";
+    const bookingId = booking?._id?.toString?.() || booking?.id || "N/A";
 
     const carName =
-      `${car?.brand || ""} ${car?.model || ""}`.trim() ||
-      "Vehicle";
+      `${car?.brand || ""} ${car?.model || ""}`.trim() || "Vehicle";
 
-    const totalAmount =
-      formatCurrency(
-        booking?.totalAmount,
-      );
+    const totalAmount = formatCurrency(booking?.totalAmount);
 
-    const paymentStatus =
-      booking?.paymentStatus ||
-      "unpaid";
+    const paymentStatus = booking?.paymentStatus || "unpaid";
 
-    console.log(
-      "========== CANCELLATION EMAIL DATA ==========",
-    );
+    console.log("========== CANCELLATION EMAIL DATA ==========");
 
-    console.log(
-      "Booking ID:",
-      bookingId,
-    );
+    console.log("Booking ID:", bookingId);
 
-    console.log(
-      "Customer:",
-      customerName,
-      customerEmail,
-    );
+    console.log("Customer:", customerName, customerEmail);
 
-    console.log(
-      "Car:",
-      carName,
-    );
+    console.log("Car:", carName);
 
-    console.log(
-      "Year:",
-      car?.year || "N/A",
-    );
+    console.log("Year:", car?.year || "N/A");
 
-    console.log(
-      "Number Plate:",
-      car?.numberPlate || "N/A",
-    );
+    console.log("Number Plate:", car?.numberPlate || "N/A");
 
-    console.log(
-      "Pickup:",
-      booking?.startDate,
-    );
+    console.log("Pickup:", booking?.startDate);
 
-    console.log(
-      "Return:",
-      booking?.endDate,
-    );
+    console.log("Return:", booking?.endDate);
 
-    console.log(
-      "Total Amount:",
-      booking?.totalAmount,
-    );
+    console.log("Total Amount:", booking?.totalAmount);
 
-    console.log(
-      "Payment Status:",
-      paymentStatus,
-    );
+    console.log("Payment Status:", paymentStatus);
 
-    console.log(
-      "Booking Status:",
-      booking?.status,
-    );
+    console.log("Booking Status:", booking?.status);
 
-    console.log(
-      "=============================================",
-    );
+    console.log("=============================================");
 
     if (!customerEmail) {
-      console.error(
-        "Cancellation email not sent: customer email missing.",
-      );
+      console.error("Cancellation email not sent: customer email missing.");
 
       return null;
     }
@@ -1148,9 +913,7 @@ const sendBookingCancellationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              car?.year || "N/A",
-            )}
+            ${escapeHtml(car?.year || "N/A")}
           </td>
 
         </tr>
@@ -1172,9 +935,7 @@ const sendBookingCancellationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              car?.numberPlate || "N/A",
-            )}
+            ${escapeHtml(car?.numberPlate || "N/A")}
           </td>
 
         </tr>
@@ -1196,11 +957,7 @@ const sendBookingCancellationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              formatDateTime(
-                booking?.startDate,
-              ),
-            )}
+            ${escapeHtml(formatDateTime(booking?.startDate))}
           </td>
 
         </tr>
@@ -1222,11 +979,7 @@ const sendBookingCancellationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              formatDateTime(
-                booking?.endDate,
-              ),
-            )}
+            ${escapeHtml(formatDateTime(booking?.endDate))}
           </td>
 
         </tr>
@@ -1249,9 +1002,7 @@ const sendBookingCancellationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              totalAmount,
-            )}
+            ${escapeHtml(totalAmount)}
           </td>
 
         </tr>
@@ -1274,9 +1025,7 @@ const sendBookingCancellationEmail = async (
               color:#111827;
             "
           >
-            ${escapeHtml(
-              paymentStatus,
-            )}
+            ${escapeHtml(paymentStatus)}
           </td>
 
         </tr>
@@ -1323,31 +1072,23 @@ const sendBookingCancellationEmail = async (
       </div>
     `;
 
-    const result =
-      await sendEmail({
-        to: customerEmail,
+    const result = await sendEmail({
+      to: customerEmail,
 
-        subject:
-          "DriveNow - Booking Cancellation",
+      subject: "DriveNow - Booking Cancellation",
 
-        html: emailLayout({
-          title:
-            "Booking Cancellation",
+      html: emailLayout({
+        title: "Booking Cancellation",
 
-          content,
-        }),
-      });
+        content,
+      }),
+    });
 
-    console.log(
-      "CANCELLATION EMAIL FUNCTION FINISHED.",
-    );
+    console.log("CANCELLATION EMAIL FUNCTION FINISHED.");
 
     return result;
   } catch (error) {
-    console.error(
-      "Booking cancellation email error:",
-      error,
-    );
+    console.error("Booking cancellation email error:", error);
 
     return null;
   }
