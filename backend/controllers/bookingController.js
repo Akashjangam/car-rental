@@ -56,6 +56,8 @@ const createBooking = async (req, res) => {
       });
     }
 
+    /* ---------- Find car ---------- */
+
     const car = await Car.findById(carId);
 
     if (!car) {
@@ -120,7 +122,7 @@ const createBooking = async (req, res) => {
       paymentStatus: "unpaid",
     });
 
-    /* ---------- Populate ---------- */
+    /* ---------- Populate booking ---------- */
 
     const populatedBooking = await Booking.findById(booking._id)
       .populate(
@@ -307,7 +309,7 @@ const cancelBooking = async (req, res) => {
     console.log("Booking cancelled successfully:", booking._id.toString());
 
     /* =====================================================
-       GET BOOKING + USER + CAR
+       GET POPULATED BOOKING FOR EMAIL
     ===================================================== */
 
     const bookingForEmail = await Booking.findById(booking._id)
@@ -319,7 +321,7 @@ const cancelBooking = async (req, res) => {
 
     console.log("========== CANCELLATION EMAIL DEBUG ==========");
 
-    console.log("Booking:", bookingForEmail?._id?.toString());
+    console.log("Booking ID:", bookingForEmail?._id?.toString());
 
     console.log("User:", bookingForEmail?.user);
 
@@ -327,19 +329,46 @@ const cancelBooking = async (req, res) => {
 
     console.log("Car:", bookingForEmail?.car);
 
+    console.log("Payment status:", bookingForEmail?.paymentStatus);
+
+    console.log("Total amount:", bookingForEmail?.totalAmount);
+
+    console.log("Pickup:", bookingForEmail?.startDate);
+
+    console.log("Return:", bookingForEmail?.endDate);
+
     console.log("==============================================");
 
     /* =====================================================
-       SEND EMAIL
+       SEND CANCELLATION EMAIL
     ===================================================== */
 
     if (bookingForEmail && bookingForEmail.user && bookingForEmail.user.email) {
       console.log("CALLING CANCELLATION EMAIL FUNCTION...");
 
-      await sendBookingCancellationEmail({
-        user: bookingForEmail.user,
-        booking: bookingForEmail,
-      });
+      /*
+        IMPORTANT:
+        Pass the populated booking directly.
+
+        Do NOT do:
+
+        {
+          user: bookingForEmail.user,
+          booking: bookingForEmail
+        }
+
+        because emailService expects:
+
+        booking.user
+        booking.car
+        booking._id
+        booking.totalAmount
+        booking.startDate
+        booking.endDate
+        booking.paymentStatus
+      */
+
+      await sendBookingCancellationEmail(bookingForEmail);
 
       console.log("CANCELLATION EMAIL FUNCTION FINISHED.");
     } else {
