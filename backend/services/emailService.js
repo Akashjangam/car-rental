@@ -1,485 +1,160 @@
-const nodemailer = require("nodemailer");
+const RESEND_API_URL = "https://api.resend.com/emails";
 
-/* =====================================================
-   SMTP TRANSPORTER
-===================================================== */
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
+const RESEND_FROM_EMAIL =
+  process.env.RESEND_FROM_EMAIL || "DriveNow <onboarding@resend.dev>";
 
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+/* =========================================================
+   FORMAT HELPERS
+========================================================= */
 
-/* =====================================================
-   SEND BOOKING CONFIRMATION EMAIL
-===================================================== */
+const formatDateTime = (value) => {
+  if (!value) {
+    return "N/A";
+  }
 
-const sendBookingConfirmationEmail = async ({ user, booking, payment }) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+};
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(Number(amount || 0));
+};
+
+const escapeHtml = (value) => {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+/* =========================================================
+   SEND EMAIL USING RESEND
+========================================================= */
+
+const sendEmail = async ({ to, subject, html }) => {
+  if (!RESEND_API_KEY) {
+    console.error("Resend email error: RESEND_API_KEY is not configured.");
+
+    return null;
+  }
+
+  if (!to) {
+    console.error("Resend email error: recipient email is missing.");
+
+    return null;
+  }
+
   try {
-    if (!user?.email) {
-      console.log("No customer email found. Confirmation email not sent.");
+    console.log(`Sending email to ${to} through Resend...`);
+
+    const response = await fetch(RESEND_API_URL, {
+      method: "POST",
+
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        from: RESEND_FROM_EMAIL,
+
+        to: [to],
+
+        subject,
+
+        html,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Resend API error:", data);
 
       return null;
     }
 
-    const car = booking?.car || {};
+    console.log("Email sent successfully through Resend.");
 
-    const formatDateTime = (date) => {
-      if (!date) return "N/A";
+    console.log("Resend Email ID:", data?.id || "N/A");
 
-      const parsedDate = new Date(date);
-
-      if (Number.isNaN(parsedDate.getTime())) {
-        return "N/A";
-      }
-
-      return parsedDate.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-
-    const formatPrice = (amount) => {
-      return new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        maximumFractionDigits: 0,
-      }).format(Number(amount || 0));
-    };
-
-    const carName =
-      `${car.brand || ""} ${car.model || ""}`.trim() || "Rental Car";
-
-    const bookingId = booking?._id?.toString() || booking?.id || "N/A";
-
-    const paymentId =
-      payment?.transactionId ||
-      payment?.paymentId ||
-      payment?._id?.toString() ||
-      payment?.id ||
-      "N/A";
-
-    const mailOptions = {
-      from: `"DriveNow" <${process.env.SMTP_USER}>`,
-      to: user.email,
-
-      subject: `DriveNow Booking Confirmed - ${bookingId}`,
-
-      text: `
-Hello ${user.name || "Customer"},
-
-Your DriveNow car rental booking has been confirmed successfully.
-
-BOOKING DETAILS
-================================
-
-Booking ID:
-${bookingId}
-
-Car:
-${carName}
-
-Year:
-${car.year || "N/A"}
-
-Number Plate:
-${car.numberPlate || "N/A"}
-
-Pickup:
-${formatDateTime(booking.startDate)}
-
-Return:
-${formatDateTime(booking.endDate)}
-
-Total Amount:
-${formatPrice(booking.totalAmount)}
-
-Payment Status:
-Paid
-
-Payment ID:
-${paymentId}
-
-Booking Status:
-Confirmed
-
-Please keep this email for your records.
-
-Thank you for choosing DriveNow.
-
-DriveNow Team
-      `.trim(),
-
-      html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
-  <title>DriveNow Booking Confirmation</title>
-</head>
-
-<body
-  style="
-    margin:0;
-    padding:0;
-    background:#f5f7fb;
-    font-family:Arial,Helvetica,sans-serif;
-  "
->
-  <div style="padding:30px 15px;">
-
-    <div
-      style="
-        max-width:650px;
-        margin:0 auto;
-        background:#ffffff;
-        border-radius:12px;
-        overflow:hidden;
-        box-shadow:0 4px 15px rgba(0,0,0,0.08);
-      "
-    >
-
-      <div
-        style="
-          background:#111827;
-          color:#ffffff;
-          padding:25px 30px;
-        "
-      >
-        <h1 style="margin:0;font-size:28px;">
-          DriveNow
-        </h1>
-
-        <p
-          style="
-            margin:8px 0 0;
-            color:#d1d5db;
-            font-size:15px;
-          "
-        >
-          Booking Confirmation
-        </p>
-      </div>
-
-      <div style="padding:30px;">
-
-        <h2
-          style="
-            margin:0 0 20px;
-            color:#111827;
-          "
-        >
-          Booking Confirmed! 🚗
-        </h2>
-
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-          "
-        >
-          Hello ${user.name || "Customer"},
-        </p>
-
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-            line-height:1.6;
-          "
-        >
-          Your DriveNow car rental booking
-          has been confirmed successfully.
-        </p>
-
-        <div
-          style="
-            background:#f9fafb;
-            border:1px solid #e5e7eb;
-            border-radius:10px;
-            padding:20px;
-            margin:25px 0;
-          "
-        >
-
-          <h3
-            style="
-              margin:0 0 18px;
-              color:#111827;
-            "
-          >
-            Booking Details
-          </h3>
-
-          <p>
-            <strong>Booking ID:</strong>
-            ${bookingId}
-          </p>
-
-          <p>
-            <strong>Car:</strong>
-            ${carName}
-          </p>
-
-          <p>
-            <strong>Year:</strong>
-            ${car.year || "N/A"}
-          </p>
-
-          <p>
-            <strong>Number Plate:</strong>
-            ${car.numberPlate || "N/A"}
-          </p>
-
-          <p>
-            <strong>Pickup:</strong>
-            ${formatDateTime(booking.startDate)}
-          </p>
-
-          <p>
-            <strong>Return:</strong>
-            ${formatDateTime(booking.endDate)}
-          </p>
-
-          <p>
-            <strong>Total Amount:</strong>
-            ${formatPrice(booking.totalAmount)}
-          </p>
-
-          <p>
-            <strong>Payment Status:</strong>
-
-            <span
-              style="
-                color:#16a34a;
-                font-weight:bold;
-              "
-            >
-              Paid
-            </span>
-          </p>
-
-          <p>
-            <strong>Payment ID:</strong>
-            ${paymentId}
-          </p>
-
-          <p>
-            <strong>Booking Status:</strong>
-
-            <span
-              style="
-                color:#16a34a;
-                font-weight:bold;
-              "
-            >
-              Confirmed
-            </span>
-          </p>
-
-        </div>
-
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-            line-height:1.6;
-          "
-        >
-          Please keep this email for your records.
-        </p>
-
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-            line-height:1.6;
-          "
-        >
-          Thank you for choosing
-          <strong>DriveNow</strong>.
-        </p>
-
-        <p
-          style="
-            margin-bottom:0;
-            color:#111827;
-            font-weight:bold;
-          "
-        >
-          DriveNow Team
-        </p>
-
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-      `,
-    };
-
-    console.log(`Sending confirmation email to ${user.email}...`);
-
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log(
-      "Booking confirmation email sent successfully:",
-      info.messageId,
-    );
-
-    return info;
+    return data;
   } catch (error) {
-    console.error("Booking confirmation email error:", error.message);
+    console.error("Resend email error:", error.message);
 
     return null;
   }
 };
 
-/* =====================================================
-   SEND BOOKING CANCELLATION EMAIL
-===================================================== */
+/* =========================================================
+   COMMON EMAIL LAYOUT
+========================================================= */
 
-const sendBookingCancellationEmail = async ({ user, booking }) => {
-  try {
-    console.log("========== CANCELLATION EMAIL START ==========");
-
-    if (!user?.email) {
-      console.log("No customer email found. Cancellation email not sent.");
-
-      return null;
-    }
-
-    const car = booking?.car || {};
-
-    const formatDateTime = (date) => {
-      if (!date) return "N/A";
-
-      const parsedDate = new Date(date);
-
-      if (Number.isNaN(parsedDate.getTime())) {
-        return "N/A";
-      }
-
-      return parsedDate.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-
-    const formatPrice = (amount) => {
-      return new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        maximumFractionDigits: 0,
-      }).format(Number(amount || 0));
-    };
-
-    const carName =
-      `${car.brand || ""} ${car.model || ""}`.trim() || "Rental Car";
-
-    const bookingId = booking?._id?.toString() || booking?.id || "N/A";
-
-    const paymentStatus = booking?.paymentStatus || "unpaid";
-
-    console.log("Cancellation email recipient:", user.email);
-
-    console.log("Cancellation booking ID:", bookingId);
-
-    const mailOptions = {
-      from: `"DriveNow" <${process.env.SMTP_USER}>`,
-
-      to: user.email,
-
-      subject: `DriveNow Booking Cancelled - ${bookingId}`,
-
-      text: `
-Hello ${user.name || "Customer"},
-
-Your DriveNow car rental booking has been cancelled successfully.
-
-BOOKING DETAILS
-================================
-
-Booking ID:
-${bookingId}
-
-Car:
-${carName}
-
-Year:
-${car.year || "N/A"}
-
-Number Plate:
-${car.numberPlate || "N/A"}
-
-Pickup:
-${formatDateTime(booking.startDate)}
-
-Return:
-${formatDateTime(booking.endDate)}
-
-Total Amount:
-${formatPrice(booking.totalAmount)}
-
-Payment Status:
-${paymentStatus}
-
-Booking Status:
-Cancelled
-
-Please keep this email for your records.
-
-Thank you for choosing DriveNow.
-
-DriveNow Team
-      `.trim(),
-
-      html: `
+const emailLayout = ({ title, content }) => {
+  return `
 <!DOCTYPE html>
+
 <html>
+
 <head>
+
   <meta charset="UTF-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   />
 
-  <title>DriveNow Booking Cancelled</title>
+  <title>${escapeHtml(title)}</title>
+
 </head>
 
 <body
   style="
     margin:0;
     padding:0;
-    background:#f5f7fb;
+    background:#f5f9fc;
     font-family:Arial,Helvetica,sans-serif;
+    color:#172033;
   "
 >
-  <div style="padding:30px 15px;">
+
+  <div
+    style="
+      width:100%;
+      padding:40px 15px;
+      box-sizing:border-box;
+    "
+  >
 
     <div
       style="
         max-width:650px;
         margin:0 auto;
         background:#ffffff;
-        border-radius:12px;
+        border:1px solid #e5edf4;
+        border-radius:16px;
         overflow:hidden;
-        box-shadow:0 4px 15px rgba(0,0,0,0.08);
       "
     >
 
@@ -487,30 +162,31 @@ DriveNow Team
 
       <div
         style="
-          background:#111827;
-          color:#ffffff;
-          padding:25px 30px;
+          padding:28px 30px;
+          border-bottom:1px solid #e5edf4;
+          background:#ffffff;
         "
       >
 
-        <h1
+        <div
           style="
-            margin:0;
-            font-size:28px;
+            font-size:24px;
+            font-weight:700;
+            color:#111827;
           "
         >
-          DriveNow
-        </h1>
+          Drive<span style="color:#0ea5e9;">Now</span>
+        </div>
 
-        <p
+        <div
           style="
-            margin:8px 0 0;
-            color:#d1d5db;
-            font-size:15px;
+            margin-top:6px;
+            font-size:13px;
+            color:#64748b;
           "
         >
-          Booking Cancellation
-        </p>
+          Car Rental
+        </div>
 
       </div>
 
@@ -518,176 +194,597 @@ DriveNow Team
 
       <div style="padding:30px;">
 
-        <h2
-          style="
-            margin:0 0 20px;
-            color:#111827;
-          "
-        >
-          Booking Cancelled
-        </h2>
+        ${content}
 
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-          "
-        >
-          Hello ${user.name || "Customer"},
-        </p>
+      </div>
 
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-            line-height:1.6;
-          "
-        >
-          Your DriveNow car rental booking has been
-          <strong>cancelled successfully</strong>.
-        </p>
+      <!-- FOOTER -->
 
-        <!-- DETAILS -->
+      <div
+        style="
+          padding:22px 30px;
+          border-top:1px solid #e5edf4;
+          background:#f8fbfd;
+          color:#64748b;
+          font-size:12px;
+          line-height:1.6;
+        "
+      >
 
-        <div
-          style="
-            background:#f9fafb;
-            border:1px solid #e5e7eb;
-            border-radius:10px;
-            padding:20px;
-            margin:25px 0;
-          "
-        >
+        <div>
+          © ${new Date().getFullYear()} DriveNow.
+          All rights reserved.
+        </div>
 
-          <h3
+        <div style="margin-top:5px;">
+          Thank you for choosing DriveNow.
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+
+</html>
+`;
+};
+
+/* =========================================================
+   BOOKING CONFIRMATION EMAIL
+========================================================= */
+
+const sendBookingConfirmationEmail = async (booking, payment = null) => {
+  try {
+    const customerEmail = booking?.user?.email || booking?.email || "";
+
+    const customerName = booking?.user?.name || booking?.name || "Customer";
+
+    const car = booking?.car || {};
+
+    const bookingId = booking?._id || booking?.id || "N/A";
+
+    let razorpayPaymentId = "";
+
+    if (typeof payment === "string") {
+      razorpayPaymentId = payment;
+    } else {
+      razorpayPaymentId =
+        payment?.transactionId ||
+        payment?.paymentId ||
+        payment?.razorpayPaymentId ||
+        booking?.razorpayPaymentId ||
+        "";
+    }
+
+    const carName = `${car.brand || ""} ${car.model || ""}`.trim() || "Vehicle";
+
+    const totalAmount = formatCurrency(booking?.totalAmount);
+
+    console.log(
+      `Sending confirmation email to ${customerEmail} through Resend...`,
+    );
+
+    const content = `
+
+      <h1
+        style="
+          margin:0;
+          font-size:28px;
+          color:#111827;
+        "
+      >
+        Booking Confirmed! 🚗
+      </h1>
+
+      <p
+        style="
+          margin:15px 0 25px;
+          color:#64748b;
+          font-size:15px;
+          line-height:1.7;
+        "
+      >
+        Hello ${escapeHtml(customerName)},
+        <br />
+        Your DriveNow booking has been confirmed successfully.
+      </p>
+
+      <div
+        style="
+          background:#ecfdf5;
+          border:1px solid #bbf7d0;
+          border-radius:12px;
+          padding:16px;
+          margin-bottom:24px;
+          color:#166534;
+        "
+      >
+
+        <strong>
+          Payment successful
+        </strong>
+
+        <br />
+
+        Your vehicle reservation is confirmed.
+
+      </div>
+
+      <table
+        style="
+          width:100%;
+          border-collapse:collapse;
+          font-size:14px;
+        "
+      >
+
+        <tr>
+
+          <td
             style="
-              margin:0 0 18px;
+              padding:11px 0;
+              color:#64748b;
+              width:42%;
+            "
+          >
+            Booking ID
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
               color:#111827;
             "
           >
-            Booking Details
-          </h3>
+            ${escapeHtml(bookingId)}
+          </td>
 
-          <p>
-            <strong>Booking ID:</strong>
-            ${bookingId}
-          </p>
+        </tr>
 
-          <p>
-            <strong>Car:</strong>
-            ${carName}
-          </p>
+        <tr>
 
-          <p>
-            <strong>Year:</strong>
-            ${car.year || "N/A"}
-          </p>
+          <td style="padding:11px 0;color:#64748b;">
+            Car
+          </td>
 
-          <p>
-            <strong>Number Plate:</strong>
-            ${car.numberPlate || "N/A"}
-          </p>
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(carName)}
+          </td>
 
-          <p>
-            <strong>Pickup:</strong>
-            ${formatDateTime(booking.startDate)}
-          </p>
+        </tr>
 
-          <p>
-            <strong>Return:</strong>
-            ${formatDateTime(booking.endDate)}
-          </p>
+        <tr>
 
-          <p>
-            <strong>Total Amount:</strong>
-            ${formatPrice(booking.totalAmount)}
-          </p>
+          <td style="padding:11px 0;color:#64748b;">
+            Year
+          </td>
 
-          <p>
-            <strong>Payment Status:</strong>
-            ${paymentStatus}
-          </p>
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(car.year || "N/A")}
+          </td>
 
-          <p>
-            <strong>Booking Status:</strong>
+        </tr>
 
-            <span
-              style="
-                color:#dc2626;
-                font-weight:bold;
-              "
-            >
-              Cancelled
-            </span>
-          </p>
+        <tr>
 
-        </div>
+          <td style="padding:11px 0;color:#64748b;">
+            Number Plate
+          </td>
 
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-            line-height:1.6;
-          "
-        >
-          Please keep this email for your records.
-        </p>
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(car.numberPlate || "N/A")}
+          </td>
 
-        <p
-          style="
-            color:#374151;
-            font-size:15px;
-            line-height:1.6;
-          "
-        >
-          Thank you for choosing
-          <strong>DriveNow</strong>.
-        </p>
+        </tr>
 
-        <p
-          style="
-            margin-bottom:0;
-            color:#111827;
-            font-weight:bold;
-          "
-        >
-          DriveNow Team
-        </p>
+        <tr>
 
+          <td style="padding:11px 0;color:#64748b;">
+            Pickup
+          </td>
+
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(formatDateTime(booking?.startDate))}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Return
+          </td>
+
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(formatDateTime(booking?.endDate))}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Total Amount
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:700;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(totalAmount)}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Payment Status
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
+              color:#16a34a;
+            "
+          >
+            Paid
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Payment ID
+          </td>
+
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(razorpayPaymentId || "N/A")}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Booking Status
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
+              color:#0ea5e9;
+            "
+          >
+            Confirmed
+          </td>
+
+        </tr>
+
+      </table>
+
+      <div
+        style="
+          margin-top:25px;
+          padding:16px;
+          border-radius:10px;
+          background:#f8fafc;
+          color:#64748b;
+          font-size:13px;
+          line-height:1.6;
+        "
+      >
+        Please keep this email for your booking records.
       </div>
-    </div>
-  </div>
-</body>
-</html>
-      `,
-    };
 
-    console.log("Sending cancellation email...");
+    `;
 
-    const info = await transporter.sendMail(mailOptions);
+    return await sendEmail({
+      to: customerEmail,
 
-    console.log(
-      "Booking cancellation email sent successfully:",
-      info.messageId,
-    );
+      subject: "DriveNow - Booking Confirmation",
 
-    console.log("========== CANCELLATION EMAIL END ==========");
+      html: emailLayout({
+        title: "Booking Confirmation",
 
-    return info;
+        content,
+      }),
+    });
   } catch (error) {
-    console.error("========== CANCELLATION EMAIL ERROR ==========");
-
-    console.error(error);
-
-    console.error("Error message:", error.message);
+    console.error("Booking confirmation email error:", error);
 
     return null;
   }
 };
 
-/* =====================================================
+/* =========================================================
+   BOOKING CANCELLATION EMAIL
+========================================================= */
+
+const sendBookingCancellationEmail = async (booking) => {
+  try {
+    const customerEmail = booking?.user?.email || booking?.email || "";
+
+    const customerName = booking?.user?.name || booking?.name || "Customer";
+
+    const car = booking?.car || {};
+
+    const bookingId = booking?._id || booking?.id || "N/A";
+
+    const carName = `${car.brand || ""} ${car.model || ""}`.trim() || "Vehicle";
+
+    const totalAmount = formatCurrency(booking?.totalAmount);
+
+    const paymentStatus = booking?.paymentStatus || "unpaid";
+
+    console.log("========== CANCELLATION EMAIL START ==========");
+
+    console.log(`Cancellation email recipient: ${customerEmail}`);
+
+    console.log(`Cancellation booking ID: ${bookingId}`);
+
+    console.log("Sending cancellation email through Resend...");
+
+    const content = `
+
+      <h1
+        style="
+          margin:0;
+          font-size:28px;
+          color:#111827;
+        "
+      >
+        Booking Cancelled
+      </h1>
+
+      <p
+        style="
+          margin:15px 0 25px;
+          color:#64748b;
+          font-size:15px;
+          line-height:1.7;
+        "
+      >
+        Hello ${escapeHtml(customerName)},
+        <br />
+        Your DriveNow car rental booking has been
+        cancelled successfully.
+      </p>
+
+      <div
+        style="
+          background:#fff7ed;
+          border:1px solid #fed7aa;
+          border-radius:12px;
+          padding:16px;
+          margin-bottom:24px;
+          color:#9a3412;
+        "
+      >
+
+        <strong>
+          Booking cancelled
+        </strong>
+
+        <br />
+
+        Your reservation is no longer active.
+
+      </div>
+
+      <table
+        style="
+          width:100%;
+          border-collapse:collapse;
+          font-size:14px;
+        "
+      >
+
+        <tr>
+
+          <td
+            style="
+              padding:11px 0;
+              color:#64748b;
+              width:42%;
+            "
+          >
+            Booking ID
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(bookingId)}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Car
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(carName)}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Year
+          </td>
+
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(car.year || "N/A")}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Number Plate
+          </td>
+
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(car.numberPlate || "N/A")}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Pickup
+          </td>
+
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(formatDateTime(booking?.startDate))}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Return
+          </td>
+
+          <td style="padding:11px 0;color:#111827;">
+            ${escapeHtml(formatDateTime(booking?.endDate))}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Total Amount
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:700;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(totalAmount)}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Payment Status
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
+              color:#111827;
+            "
+          >
+            ${escapeHtml(paymentStatus)}
+          </td>
+
+        </tr>
+
+        <tr>
+
+          <td style="padding:11px 0;color:#64748b;">
+            Booking Status
+          </td>
+
+          <td
+            style="
+              padding:11px 0;
+              font-weight:600;
+              color:#dc2626;
+            "
+          >
+            Cancelled
+          </td>
+
+        </tr>
+
+      </table>
+
+      <div
+        style="
+          margin-top:25px;
+          padding:16px;
+          border-radius:10px;
+          background:#f8fafc;
+          color:#64748b;
+          font-size:13px;
+          line-height:1.6;
+        "
+      >
+        If a refund applies to your booking,
+        it will be processed according to the payment
+        provider's refund process.
+      </div>
+
+    `;
+
+    const result = await sendEmail({
+      to: customerEmail,
+
+      subject: "DriveNow - Booking Cancellation",
+
+      html: emailLayout({
+        title: "Booking Cancellation",
+
+        content,
+      }),
+    });
+
+    console.log("CANCELLATION EMAIL FUNCTION FINISHED.");
+
+    return result;
+  } catch (error) {
+    console.error("Booking cancellation email error:", error);
+
+    return null;
+  }
+};
+
+/* =========================================================
    EXPORTS
-===================================================== */
+========================================================= */
 
 module.exports = {
   sendBookingConfirmationEmail,
