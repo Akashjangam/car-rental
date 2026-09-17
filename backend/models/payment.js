@@ -18,6 +18,13 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
+    },
+
+    transactionId: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
     amount: {
@@ -34,26 +41,42 @@ const paymentSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      default: "Paytm",
-    },
-
-    transactionId: {
-      type: String,
-      default: null,
-    },
-
-    bankTransactionId: {
-      type: String,
-      default: null,
+      default: "Razorpay",
+      trim: true,
     },
 
     responseCode: {
       type: String,
-      default: null,
+      default: "",
+      trim: true,
     },
 
     responseMessage: {
       type: String,
+      default: "",
+      trim: true,
+    },
+
+    refundStatus: {
+      type: String,
+      enum: ["not_requested", "pending", "processed", "failed"],
+      default: "not_requested",
+    },
+
+    refundId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    refundAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    refundedAt: {
+      type: Date,
       default: null,
     },
   },
