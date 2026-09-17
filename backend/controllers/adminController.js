@@ -1,27 +1,26 @@
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
+const Razorpay = require("razorpay");
 
 const User = require("../models/User");
 const Car = require("../models/Car");
 const Booking = require("../models/Booking");
 const Payment = require("../models/payment");
 
-const Razorpay = require("razorpay");
-
 const { sendBookingCancellationEmail } = require("../services/emailService");
 
-// ======================================================
-// RAZORPAY
-// ======================================================
+/* ======================================================
+   RAZORPAY
+====================================================== */
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ======================================================
-// ADMIN - DASHBOARD
-// ======================================================
+/* ======================================================
+   ADMIN - DASHBOARD
+====================================================== */
 
 const getAdminDashboard = async (req, res) => {
   try {
@@ -33,11 +32,17 @@ const getAdminDashboard = async (req, res) => {
       totalBookings,
       paidBookings,
     ] = await Promise.all([
-      User.countDocuments({ role: "user" }),
+      User.countDocuments({
+        role: "user",
+      }),
 
-      User.countDocuments({ role: "dealer" }),
+      User.countDocuments({
+        role: "dealer",
+      }),
 
-      User.countDocuments({ role: "admin" }),
+      User.countDocuments({
+        role: "admin",
+      }),
 
       Car.countDocuments(),
 
@@ -80,13 +85,15 @@ const getAdminDashboard = async (req, res) => {
   }
 };
 
-// ======================================================
-// ADMIN - GET ALL USERS
-// ======================================================
+/* ======================================================
+   ADMIN - GET ALL USERS
+====================================================== */
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    const users = await User.find().select("-password").sort({
+      createdAt: -1,
+    });
 
     return res.status(200).json({
       success: true,
@@ -103,9 +110,9 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// ======================================================
-// ADMIN - UPDATE USER ROLE
-// ======================================================
+/* ======================================================
+   ADMIN - UPDATE USER ROLE
+====================================================== */
 
 const updateUserRole = async (req, res) => {
   try {
@@ -173,9 +180,9 @@ const updateUserRole = async (req, res) => {
   }
 };
 
-// ======================================================
-// ADMIN - CREATE MEMBER
-// ======================================================
+/* ======================================================
+   ADMIN - CREATE MEMBER
+====================================================== */
 
 const createAdminMember = async (req, res) => {
   try {
@@ -256,9 +263,9 @@ const createAdminMember = async (req, res) => {
   }
 };
 
-// ======================================================
-// ADMIN - DELETE MEMBER
-// ======================================================
+/* ======================================================
+   ADMIN - DELETE MEMBER
+====================================================== */
 
 const deleteAdminMember = async (req, res) => {
   try {
@@ -306,9 +313,9 @@ const deleteAdminMember = async (req, res) => {
   }
 };
 
-// ======================================================
-// ADMIN - ACTIVATE / CANCEL MEMBERSHIP
-// ======================================================
+/* ======================================================
+   ADMIN - ACTIVATE / CANCEL MEMBERSHIP
+====================================================== */
 
 const updateAdminMemberStatus = async (req, res) => {
   try {
@@ -377,9 +384,9 @@ const updateAdminMemberStatus = async (req, res) => {
   }
 };
 
-// ======================================================
-// ADMIN - GET ALL BOOKINGS
-// ======================================================
+/* ======================================================
+   ADMIN - GET ALL BOOKINGS
+====================================================== */
 
 const getAdminBookings = async (req, res) => {
   try {
@@ -393,10 +400,6 @@ const getAdminBookings = async (req, res) => {
         createdAt: -1,
       });
 
-    // --------------------------------------------------
-    // Get payment records
-    // --------------------------------------------------
-
     const bookingIds = bookings.map((booking) => booking._id);
 
     const payments = await Payment.find({
@@ -407,10 +410,6 @@ const getAdminBookings = async (req, res) => {
       createdAt: -1,
     });
 
-    // --------------------------------------------------
-    // Create payment map
-    // --------------------------------------------------
-
     const paymentMap = new Map();
 
     payments.forEach((payment) => {
@@ -420,10 +419,6 @@ const getAdminBookings = async (req, res) => {
         paymentMap.set(bookingId, payment);
       }
     });
-
-    // --------------------------------------------------
-    // Attach payment information
-    // --------------------------------------------------
 
     const bookingsWithPayments = bookings.map((booking) => {
       const payment = paymentMap.get(booking._id.toString());
@@ -473,9 +468,7 @@ const getAdminBookings = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-
       count: bookingsWithPayments.length,
-
       bookings: bookingsWithPayments,
     });
   } catch (error) {
@@ -489,9 +482,9 @@ const getAdminBookings = async (req, res) => {
   }
 };
 
-// ======================================================
-// ADMIN - REFUND PAYMENT
-// ======================================================
+/* ======================================================
+   ADMIN - REFUND PAYMENT
+====================================================== */
 
 const refundBookingPayment = async (bookingId) => {
   try {
@@ -500,10 +493,6 @@ const refundBookingPayment = async (bookingId) => {
       status: "success",
     });
 
-    // --------------------------------------------------
-    // No successful payment
-    // --------------------------------------------------
-
     if (!payment) {
       return {
         success: true,
@@ -511,10 +500,6 @@ const refundBookingPayment = async (bookingId) => {
         message: "No successful payment found for this booking.",
       };
     }
-
-    // --------------------------------------------------
-    // Already processed
-    // --------------------------------------------------
 
     if (payment.refundStatus === "processed") {
       console.log("Payment already marked as refunded in database.");
@@ -529,10 +514,6 @@ const refundBookingPayment = async (bookingId) => {
       };
     }
 
-    // --------------------------------------------------
-    // Payment ID required
-    // --------------------------------------------------
-
     if (!payment.transactionId) {
       return {
         success: false,
@@ -541,9 +522,9 @@ const refundBookingPayment = async (bookingId) => {
       };
     }
 
-    // --------------------------------------------------
-    // Check existing Razorpay refunds
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Check existing Razorpay refunds
+    --------------------------------------------- */
 
     console.log("Checking existing Razorpay refunds...");
 
@@ -609,9 +590,9 @@ const refundBookingPayment = async (bookingId) => {
       console.log("Existing refund lookup failed:", fetchRefundError.message);
     }
 
-    // --------------------------------------------------
-    // Validate amount
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Validate amount
+    --------------------------------------------- */
 
     const refundAmount = Number(payment.amount || 0);
 
@@ -625,9 +606,9 @@ const refundBookingPayment = async (bookingId) => {
 
     const amountInPaise = Math.round(refundAmount * 100);
 
-    // --------------------------------------------------
-    // Mark pending
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Mark pending
+    --------------------------------------------- */
 
     payment.refundStatus = "pending";
 
@@ -647,9 +628,9 @@ const refundBookingPayment = async (bookingId) => {
 
     console.log("==========================================");
 
-    // --------------------------------------------------
-    // Create refund
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Create Razorpay refund
+    --------------------------------------------- */
 
     const refund = await razorpay.payments.refund(payment.transactionId, {
       amount: amountInPaise,
@@ -665,9 +646,9 @@ const refundBookingPayment = async (bookingId) => {
       receipt: `refund_${bookingId.toString().slice(-20)}`,
     });
 
-    // --------------------------------------------------
-    // Save refund information
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Save refund information
+    --------------------------------------------- */
 
     payment.refundStatus =
       refund.status === "processed" ? "processed" : "pending";
@@ -697,8 +678,11 @@ const refundBookingPayment = async (bookingId) => {
     return {
       success: true,
       refunded: true,
+
       refundId: payment.refundId,
+
       refundStatus: payment.refundStatus,
+
       refundAmount: payment.refundAmount,
     };
   } catch (error) {
@@ -715,9 +699,9 @@ const refundBookingPayment = async (bookingId) => {
 
     console.error("==========================================");
 
-    // --------------------------------------------------
-    // Already fully refunded
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Already fully refunded
+    --------------------------------------------- */
 
     if (
       String(errorDescription).toLowerCase().includes("fully refunded already")
@@ -745,8 +729,11 @@ const refundBookingPayment = async (bookingId) => {
             success: true,
             refunded: true,
             alreadyRefunded: true,
+
             refundId: payment.refundId || "",
+
             refundStatus: payment.refundStatus,
+
             refundAmount: payment.refundAmount,
           };
         }
@@ -755,9 +742,9 @@ const refundBookingPayment = async (bookingId) => {
       }
     }
 
-    // --------------------------------------------------
-    // Mark failed
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Mark failed
+    --------------------------------------------- */
 
     try {
       await Payment.findOneAndUpdate(
@@ -775,6 +762,7 @@ const refundBookingPayment = async (bookingId) => {
     return {
       success: false,
       refunded: false,
+
       message:
         error?.error?.description ||
         error?.message ||
@@ -783,13 +771,23 @@ const refundBookingPayment = async (bookingId) => {
   }
 };
 
-// ======================================================
-// ADMIN - SYNC EXISTING REFUND
-// ======================================================
+/* ======================================================
+   ADMIN - SYNC EXISTING REFUND
+====================================================== */
 
 const syncBookingRefund = async (req, res) => {
   try {
     const { id } = req.params;
+
+    console.log("==========================================");
+
+    console.log("SYNC REFUND REQUEST RECEIVED");
+
+    console.log("Booking ID:", id);
+
+    console.log("Admin:", req.user?._id?.toString());
+
+    console.log("==========================================");
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -836,9 +834,9 @@ const syncBookingRefund = async (req, res) => {
 
     console.log("==========================================");
 
-    // --------------------------------------------------
-    // Get refunds from Razorpay
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Get refunds from Razorpay
+    --------------------------------------------- */
 
     const refundsResponse = await razorpay.payments.fetchMultipleRefund(
       payment.transactionId,
@@ -848,9 +846,11 @@ const syncBookingRefund = async (req, res) => {
       ? refundsResponse.items
       : [];
 
-    // --------------------------------------------------
-    // No refunds
-    // --------------------------------------------------
+    console.log("Razorpay refunds found:", refunds.length);
+
+    /* ---------------------------------------------
+       No refunds
+    --------------------------------------------- */
 
     if (refunds.length === 0) {
       return res.status(404).json({
@@ -859,9 +859,9 @@ const syncBookingRefund = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Find processed/pending refund
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Find processed/pending refund
+    --------------------------------------------- */
 
     const refund = refunds.find(
       (item) => item.status === "processed" || item.status === "pending",
@@ -874,9 +874,9 @@ const syncBookingRefund = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Save refund details
-    // --------------------------------------------------
+    /* ---------------------------------------------
+       Save refund details
+    --------------------------------------------- */
 
     payment.refundStatus =
       refund.status === "processed" ? "processed" : "pending";
@@ -919,28 +919,37 @@ const syncBookingRefund = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Refund synchronization error:", error);
+    console.error("==========================================");
+
+    console.error("REFUND SYNCHRONIZATION ERROR");
+
+    console.error(error);
+
+    console.error("==========================================");
 
     return res.status(500).json({
       success: false,
+
       message: "Failed to synchronize refund information.",
+
       error: error?.error?.description || error?.message || "Unknown error",
     });
   }
 };
 
-// ======================================================
-// ADMIN - UPDATE BOOKING STATUS
-// ======================================================
+/* ======================================================
+   ADMIN - UPDATE BOOKING STATUS
+====================================================== */
 
 const updateAdminBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
+
     const { status } = req.body;
 
-    // --------------------------------------------------
-    // Validate booking ID
-    // --------------------------------------------------
+    /* ---------------------------------------------
+         Validate booking ID
+      --------------------------------------------- */
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -949,9 +958,9 @@ const updateAdminBookingStatus = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Validate status
-    // --------------------------------------------------
+    /* ---------------------------------------------
+         Validate status
+      --------------------------------------------- */
 
     const allowedStatuses = ["pending", "confirmed", "completed", "cancelled"];
 
@@ -963,9 +972,9 @@ const updateAdminBookingStatus = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Get booking
-    // --------------------------------------------------
+    /* ---------------------------------------------
+         Get booking
+      --------------------------------------------- */
 
     const booking = await Booking.findById(id)
       .populate("user", "name email")
@@ -981,9 +990,9 @@ const updateAdminBookingStatus = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Already cancelled
-    // --------------------------------------------------
+    /* ---------------------------------------------
+         Already cancelled
+      --------------------------------------------- */
 
     if (booking.status === "cancelled" && status === "cancelled") {
       return res.status(400).json({
@@ -992,9 +1001,9 @@ const updateAdminBookingStatus = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Completed cannot be cancelled
-    // --------------------------------------------------
+    /* ---------------------------------------------
+         Completed cannot be cancelled
+      --------------------------------------------- */
 
     if (booking.status === "completed" && status === "cancelled") {
       return res.status(400).json({
@@ -1007,9 +1016,9 @@ const updateAdminBookingStatus = async (req, res) => {
 
     let refundResult = null;
 
-    // ==================================================
-    // PAID BOOKING CANCELLATION
-    // ==================================================
+    /* =============================================
+         PAID BOOKING CANCELLATION
+      ============================================= */
 
     if (
       status === "cancelled" &&
@@ -1034,17 +1043,17 @@ const updateAdminBookingStatus = async (req, res) => {
       console.log("Refund handled successfully.");
     }
 
-    // ==================================================
-    // UPDATE BOOKING STATUS
-    // ==================================================
+    /* ---------------------------------------------
+         Update booking status
+      --------------------------------------------- */
 
     booking.status = status;
 
     await booking.save();
 
-    // ==================================================
-    // LOG STATUS UPDATE
-    // ==================================================
+    /* ---------------------------------------------
+         Log status update
+      --------------------------------------------- */
 
     console.log("==========================================");
 
@@ -1070,9 +1079,9 @@ const updateAdminBookingStatus = async (req, res) => {
 
     console.log("==========================================");
 
-    // ==================================================
-    // SEND CANCELLATION EMAIL
-    // ==================================================
+    /* =============================================
+         SEND CANCELLATION EMAIL
+      ============================================= */
 
     if (status === "cancelled" && previousStatus !== "cancelled") {
       try {
@@ -1083,10 +1092,13 @@ const updateAdminBookingStatus = async (req, res) => {
         } else {
           console.log("Sending admin cancellation email...");
 
-          await sendBookingCancellationEmail({
-            user: booking.user,
-            booking,
-          });
+          /*
+              IMPORTANT:
+              Send the populated booking directly.
+              This prevents N/A values in email.
+            */
+
+          await sendBookingCancellationEmail(booking);
 
           console.log(
             "Admin cancellation email sent successfully to:",
@@ -1094,7 +1106,11 @@ const updateAdminBookingStatus = async (req, res) => {
           );
         }
       } catch (emailError) {
-        // Email failure does not undo cancellation
+        /*
+            Email failure does NOT undo
+            the cancellation.
+          */
+
         console.error("Admin cancellation email failed:");
 
         console.error(emailError);
@@ -1103,9 +1119,9 @@ const updateAdminBookingStatus = async (req, res) => {
       }
     }
 
-    // ==================================================
-    // RESPONSE
-    // ==================================================
+    /* ---------------------------------------------
+         Response
+      --------------------------------------------- */
 
     return res.status(200).json({
       success: true,
@@ -1144,9 +1160,9 @@ const updateAdminBookingStatus = async (req, res) => {
   }
 };
 
-// ======================================================
-// EXPORTS
-// ======================================================
+/* ======================================================
+   EXPORTS
+====================================================== */
 
 module.exports = {
   getAdminDashboard,
