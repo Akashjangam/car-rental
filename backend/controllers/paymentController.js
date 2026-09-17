@@ -107,6 +107,7 @@ const createPayment = async (req, res) => {
 
       notes: {
         bookingId: booking._id.toString(),
+
         userId: req.user._id.toString(),
       },
     });
@@ -115,10 +116,15 @@ const createPayment = async (req, res) => {
 
     const payment = await Payment.create({
       booking: booking._id,
+
       user: req.user._id,
+
       orderId: razorpayOrder.id,
+
       amount,
+
       status: "pending",
+
       paymentMethod: "Razorpay",
     });
 
@@ -131,21 +137,29 @@ const createPayment = async (req, res) => {
 
       order: {
         id: razorpayOrder.id,
+
         amount: razorpayOrder.amount,
+
         currency: razorpayOrder.currency,
       },
 
       payment: {
         id: payment._id,
+
         orderId: payment.orderId,
+
         amount: payment.amount,
+
         status: payment.status,
+
         paymentMethod: payment.paymentMethod,
       },
 
       booking: {
         id: booking._id,
+
         status: booking.status,
+
         paymentStatus: booking.paymentStatus,
       },
     });
@@ -154,7 +168,9 @@ const createPayment = async (req, res) => {
 
     return res.status(500).json({
       success: false,
+
       message: "Unable to create payment order",
+
       error: error.message,
     });
   }
@@ -227,7 +243,9 @@ const verifyPayment = async (req, res) => {
 
     const payment = await Payment.findOne({
       orderId: razorpay_order_id,
+
       booking: booking._id,
+
       user: req.user._id,
     });
 
@@ -251,7 +269,9 @@ const verifyPayment = async (req, res) => {
 
     if (generatedSignature !== razorpay_signature) {
       payment.status = "failed";
+
       payment.responseCode = "SIGNATURE_MISMATCH";
+
       payment.responseMessage = "Payment signature verification failed";
 
       await payment.save();
@@ -271,9 +291,13 @@ const verifyPayment = async (req, res) => {
     ================================================= */
 
     payment.status = "success";
+
     payment.transactionId = razorpay_payment_id;
+
     payment.paymentMethod = "Razorpay";
+
     payment.responseCode = "SUCCESS";
+
     payment.responseMessage = "Payment verified successfully";
 
     await payment.save();
@@ -281,7 +305,9 @@ const verifyPayment = async (req, res) => {
     /* ---------- Update Booking ---------- */
 
     booking.paymentStatus = "paid";
+
     booking.status = "confirmed";
+
     booking.paymentId = payment._id.toString();
 
     await booking.save();
@@ -297,15 +323,68 @@ const verifyPayment = async (req, res) => {
       )
       .populate("user", "name email");
 
+    if (!bookingForEmail) {
+      console.error("Booking could not be loaded for confirmation email.");
+    } else {
+      console.log("========== CONFIRMATION EMAIL DEBUG ==========");
+
+      console.log("Booking ID:", bookingForEmail._id?.toString());
+
+      console.log("Customer:", bookingForEmail.user);
+
+      console.log("Car:", bookingForEmail.car);
+
+      console.log("Pickup:", bookingForEmail.startDate);
+
+      console.log("Return:", bookingForEmail.endDate);
+
+      console.log("Total amount:", bookingForEmail.totalAmount);
+
+      console.log("Payment status:", bookingForEmail.paymentStatus);
+
+      console.log("Booking status:", bookingForEmail.status);
+
+      console.log("Razorpay payment ID:", payment.transactionId);
+
+      console.log("==============================================");
+    }
+
     /* =================================================
        SEND BOOKING CONFIRMATION EMAIL
     ================================================= */
 
-    await sendBookingConfirmationEmail({
-      user: bookingForEmail.user,
-      booking: bookingForEmail,
-      payment,
-    });
+    if (bookingForEmail && bookingForEmail.user && bookingForEmail.user.email) {
+      console.log(
+        `Sending confirmation email to ${bookingForEmail.user.email}...`,
+      );
+
+      /*
+        IMPORTANT:
+
+        Pass the populated booking directly.
+
+        The email service expects:
+
+        booking.user
+        booking.car
+        booking._id
+        booking.startDate
+        booking.endDate
+        booking.totalAmount
+        booking.paymentStatus
+        booking.status
+
+        Payment is passed separately.
+      */
+
+      await sendBookingConfirmationEmail(bookingForEmail, payment);
+
+      console.log("CONFIRMATION EMAIL FUNCTION FINISHED.");
+    } else {
+      console.log("CONFIRMATION EMAIL NOT SENT.");
+
+      console.log("Reason: Customer email not found.");
+    }
 
     /* =================================================
        SUCCESS RESPONSE
@@ -318,16 +397,23 @@ const verifyPayment = async (req, res) => {
 
       payment: {
         id: payment._id,
+
         orderId: payment.orderId,
+
         transactionId: payment.transactionId,
+
         amount: payment.amount,
+
         status: payment.status,
+
         paymentMethod: payment.paymentMethod,
       },
 
       booking: {
         id: booking._id,
+
         status: booking.status,
+
         paymentStatus: booking.paymentStatus,
       },
     });
@@ -336,7 +422,9 @@ const verifyPayment = async (req, res) => {
 
     return res.status(500).json({
       success: false,
+
       message: "Payment verification failed",
+
       error: error.message,
     });
   }
@@ -352,6 +440,7 @@ const paymentCallback = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+
       message: "Payment callback received",
     });
   } catch (error) {
@@ -359,6 +448,7 @@ const paymentCallback = async (req, res) => {
 
     return res.status(500).json({
       success: false,
+
       message: "Callback failed",
     });
   }
@@ -375,6 +465,7 @@ const getPaymentStatus = async (req, res) => {
     if (!orderId) {
       return res.status(400).json({
         success: false,
+
         message: "Order ID is required",
       });
     }
@@ -389,6 +480,7 @@ const getPaymentStatus = async (req, res) => {
     if (!payment) {
       return res.status(404).json({
         success: false,
+
         message: "Payment not found",
       });
     }
@@ -398,12 +490,14 @@ const getPaymentStatus = async (req, res) => {
     if (payment.user && payment.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
+
         message: "You are not allowed to view this payment",
       });
     }
 
     return res.status(200).json({
       success: true,
+
       payment,
     });
   } catch (error) {
@@ -411,7 +505,9 @@ const getPaymentStatus = async (req, res) => {
 
     return res.status(500).json({
       success: false,
+
       message: "Failed to get payment status",
+
       error: error.message,
     });
   }
