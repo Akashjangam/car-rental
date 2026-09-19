@@ -85,4 +85,6 @@ const paymentSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model("Payment", paymentSchema);
+// Prevent OverwriteModelError during repeated imports/reloads
+module.exports =
+  mongoose.models.Payment || mongoose.model("Payment", paymentSchema);

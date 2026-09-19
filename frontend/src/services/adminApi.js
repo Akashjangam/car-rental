@@ -169,6 +169,54 @@ export const getDealerCars = async (token) => {
 };
 
 // ======================================================
+// DEALER - GET ANALYTICS
+// ======================================================
+
+export const getDealerAnalytics = async (token) => {
+  const response = await api.get("/dealer/analytics", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
+
+// ======================================================
+// DEALER - GET BOOKINGS
+// ======================================================
+
+export const getDealerBookings = async (token) => {
+  const response = await api.get("/dealer/bookings", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
+
+// ======================================================
+// DEALER - UPDATE BOOKING STATUS
+// ======================================================
+
+export const updateDealerBookingStatus = async (bookingId, status, token) => {
+  const response = await api.put(
+    `/dealer/bookings/${bookingId}/status`,
+    {
+      status,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return response.data;
+};
+
+// ======================================================
 // DEALER - GET SINGLE CAR
 // ======================================================
 

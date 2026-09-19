@@ -10,42 +10,62 @@ const {
   getDealerCarById,
   updateDealerCar,
   deleteDealerCar,
+  getDealerAnalytics,
+  getDealerBookings,
+  updateDealerBookingStatus,
 } = require("../controllers/dealerController");
 
 const router = express.Router();
 
-// ========================================
-// DEALER PROFILE
-// ========================================
+// =====================================================
+// DEALER - PROFILE
+// =====================================================
 
-// Get dealer profile
-// GET /api/dealer/profile
 router.get("/profile", protect, dealer, (req, res) => {
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
-    message: "Dealer profile accessed successfully",
+    message: "Dealer profile accessed successfully.",
     user: req.user,
   });
 });
 
-// ========================================
-// DEALER CARS
-// ========================================
+// =====================================================
+// DEALER - ANALYTICS
+// =====================================================
 
-// Get all dealer cars
-// GET /api/dealer/cars
+router.get("/analytics", protect, dealer, getDealerAnalytics);
+
+// =====================================================
+// DEALER - BOOKINGS
+// =====================================================
+
+router.get("/bookings", protect, dealer, getDealerBookings);
+
+// UPDATE BOOKING STATUS
+router.put("/bookings/:id/status", protect, dealer, updateDealerBookingStatus);
+
+// =====================================================
+// DEALER - GET MY CARS
+// =====================================================
+
 router.get("/cars", protect, dealer, getDealerCars);
 
-// Get single dealer car
-// GET /api/dealer/cars/:id
+// =====================================================
+// DEALER - GET SINGLE CAR
+// =====================================================
+
 router.get("/cars/:id", protect, dealer, getDealerCarById);
 
-// Create dealer car
-// POST /api/dealer/cars
+// =====================================================
+// DEALER - CREATE CAR
+// =====================================================
+
 router.post("/cars", protect, dealer, upload.single("image"), createDealerCar);
 
-// Update dealer car
-// PUT /api/dealer/cars/:id
+// =====================================================
+// DEALER - UPDATE CAR
+// =====================================================
+
 router.put(
   "/cars/:id",
   protect,
@@ -54,8 +74,14 @@ router.put(
   updateDealerCar,
 );
 
-// Delete dealer car
-// DELETE /api/dealer/cars/:id
+// =====================================================
+// DEALER - DELETE CAR
+// =====================================================
+
 router.delete("/cars/:id", protect, dealer, deleteDealerCar);
+
+// =====================================================
+// EXPORT ROUTER
+// =====================================================
 
 module.exports = router;
