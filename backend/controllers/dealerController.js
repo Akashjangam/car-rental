@@ -1,6 +1,6 @@
 const Car = require("../models/Car");
 const Booking = require("../models/Booking");
-const Payment = require("../models/Payment");
+const Payment = require("../models/payment");
 
 // =====================================================
 // CREATE DEALER CAR
@@ -273,7 +273,6 @@ const updateDealerCar = async (req, res) => {
     }
 
     // Do NOT change dealer ownership
-
     await car.save();
 
     return res.status(200).json({
@@ -575,21 +574,13 @@ const getDealerBookings = async (req, res) => {
 
       return {
         _id: booking._id,
-
         user: booking.user,
-
         car: booking.car,
-
         startDate: booking.startDate,
-
         endDate: booking.endDate,
-
         totalAmount: booking.totalAmount,
-
         status: booking.status,
-
         paymentStatus: booking.paymentStatus,
-
         createdAt: booking.createdAt,
 
         payment: payment
