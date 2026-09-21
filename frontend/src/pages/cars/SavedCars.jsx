@@ -1,21 +1,19 @@
 
 import { Link } from "react-router-dom";
 import { Heart, ArrowLeft, CarFront } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const SavedCars = () => {
-  const [savedCars, setSavedCars] = useState([]);
-
-  useEffect(() => {
+  const [savedCars, setSavedCars] = useState(() => {
     try {
       const storedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
-
-      setSavedCars(Array.isArray(storedCars) ? storedCars : []);
+      return Array.isArray(storedCars) ? storedCars : [];
     } catch (error) {
       console.error("Failed to load saved cars:", error);
-      setSavedCars([]);
+      return [];
     }
-  }, []);
+  });
+
 
   const removeSavedCar = (carId) => {
     const updatedCars = savedCars.filter(

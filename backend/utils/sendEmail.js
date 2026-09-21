@@ -38,13 +38,29 @@ const transporter = nodemailer.createTransport({
 ========================================================= */
 
 const sendPasswordResetEmail = async (email, resetUrl) => {
-  if (!SMTP_USER || !SMTP_PASS) {
-    throw new Error("SMTP_USER or SMTP_PASS is missing.");
-  }
-
   if (!email || !resetUrl) {
     throw new Error("Email address and reset URL are required.");
   }
+
+  // Reuse existing Brevo HTTP email service if configured
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const { sendPasswordResetEmail: brevoReset } = require("../services/emailService");
+      return await brevoReset(email, resetUrl);
+    } catch (brevoErr) {
+      console.error("Brevo password reset email error, attempting fallback:", brevoErr.message);
+    }
+  }
+
+  // Fallback to SMTP if SMTP credentials are provided
+  if (!SMTP_USER || !SMTP_PASS) {
+    console.warn(
+      "WARNING: Neither Brevo API nor SMTP credentials configured for password reset. Reset URL:",
+      resetUrl,
+    );
+    return null;
+  }
+
 
   try {
     console.log("========================================");

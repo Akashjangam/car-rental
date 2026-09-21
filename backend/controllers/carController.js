@@ -1,5 +1,7 @@
 const Car = require("../models/Car");
+const Review = require("../models/Review");
 const mongoose = require("mongoose");
+
 
 // =====================================================
 // CREATE CAR - ADMIN
@@ -104,9 +106,40 @@ const getCars = async (req, res) => {
       createdAt: -1,
     });
 
+    const reviewStats = await Review.aggregate([
+      {
+        $group: {
+          _id: "$car",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const reviewMap = new Map();
+    reviewStats.forEach((stat) => {
+      reviewMap.set(stat._id.toString(), {
+        averageRating: Number(stat.averageRating.toFixed(1)),
+        totalReviews: stat.totalReviews,
+      });
+    });
+
+    const carsWithReviews = cars.map((car) => {
+      const carObj = car.toObject ? car.toObject() : car;
+      const stats = reviewMap.get(car._id.toString()) || {
+        averageRating: 0,
+        totalReviews: 0,
+      };
+      return {
+        ...carObj,
+        averageRating: stats.averageRating,
+        totalReviews: stats.totalReviews,
+      };
+    });
+
     return res.status(200).json({
       success: true,
-      cars,
+      cars: carsWithReviews,
     });
   } catch (error) {
     console.error("Get cars error:", error);
@@ -143,10 +176,31 @@ const getCarById = async (req, res) => {
       });
     }
 
+    const reviewStats = await Review.aggregate([
+      { $match: { car: new mongoose.Types.ObjectId(id) } },
+      {
+        $group: {
+          _id: "$car",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const stats = reviewStats[0] || { averageRating: 0, totalReviews: 0 };
+    const carWithReview = {
+      ...(car.toObject ? car.toObject() : car),
+      averageRating: stats.averageRating
+        ? Number(stats.averageRating.toFixed(1))
+        : 0,
+      totalReviews: stats.totalReviews || 0,
+    };
+
     return res.status(200).json({
       success: true,
-      car,
+      car: carWithReview,
     });
+
   } catch (error) {
     console.error("Get car error:", error);
 

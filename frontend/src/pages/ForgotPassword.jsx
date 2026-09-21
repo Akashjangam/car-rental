@@ -4,7 +4,7 @@ import { ArrowLeft, Car, Mail, CheckCircle2 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import api from "../services/api";
+import { forgotPassword } from "../services/authApi";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -28,19 +28,18 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await api.post("/auth/forgot-password", {
-        email: normalizedEmail,
-      });
+      const data = await forgotPassword(normalizedEmail);
 
-      if (response.data?.success) {
+      if (data?.success) {
         setSuccess(true);
         setEmail("");
       } else {
         setError(
-          response.data?.message ||
+          data?.message ||
             "Unable to process your request. Please try again.",
         );
       }
+
     } catch (err) {
       console.error("Forgot password error:", err);
 

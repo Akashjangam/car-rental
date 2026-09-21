@@ -1,19 +1,11 @@
-const Razorpay = require("razorpay");
 const crypto = require("crypto");
 
 const Payment = require("../models/payment");
 const Booking = require("../models/Booking");
+const { getRazorpayInstance } = require("../config/razorpay");
 
 const { sendBookingConfirmationEmail } = require("../services/emailService");
 
-/* =====================================================
-   RAZORPAY INSTANCE
-===================================================== */
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 /* =====================================================
    CREATE RAZORPAY PAYMENT ORDER
@@ -84,12 +76,15 @@ const createPayment = async (req, res) => {
       });
     }
 
-    /* ---------- Razorpay Configuration ---------- */
+    /* ---------- Get Razorpay Instance ---------- */
 
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    let razorpay;
+    try {
+      razorpay = getRazorpayInstance();
+    } catch (configErr) {
       return res.status(500).json({
         success: false,
-        message: "Razorpay is not configured on the server",
+        message: configErr.message || "Razorpay is not configured on the server",
       });
     }
 
@@ -308,9 +303,12 @@ const verifyPayment = async (req, res) => {
 
     booking.status = "confirmed";
 
-    booking.paymentId = payment._id.toString();
+    booking.paymentId = razorpay_payment_id;
+
+    booking.paymentDocId = payment._id;
 
     await booking.save();
+
 
     /* =================================================
        GET COMPLETE BOOKING FOR EMAIL

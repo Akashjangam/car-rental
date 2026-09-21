@@ -8,6 +8,7 @@ const {
 } = require("../controllers/paymentController");
 
 const protect = require("../middleware/authMiddleware");
+const { paymentLimiter } = require("../middleware/rateLimitMiddleware");
 
 const router = express.Router();
 
@@ -23,7 +24,8 @@ router.post("/", protect, createPayment);
 // POST /api/payments/verify
 // ======================================================
 
-router.post("/verify", protect, verifyPayment);
+router.post("/verify", protect, paymentLimiter, verifyPayment);
+
 
 // ======================================================
 // RAZORPAY CALLBACK

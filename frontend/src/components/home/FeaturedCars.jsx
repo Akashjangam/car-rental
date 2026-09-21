@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 
 import { getCars } from "../../services/carApi";
-import { getCarReviews } from "../../services/reviewApi";
 
 import CarHero from "../../assets/CarHero.png";
 
@@ -62,53 +61,17 @@ function FeaturedCars() {
         setCars(availableCars);
 
         // ========================================================
-        // FETCH REVIEWS
+        // POPULATE REVIEWS FROM PRE-CALCULATED RATINGS
         // ========================================================
-
-        const reviewResults = await Promise.all(
-          availableCars.map(async (car) => {
-            const carId = car?._id || car?.id;
-
-            if (!carId) {
-              return null;
-            }
-
-            try {
-              const reviewResponse = await getCarReviews(carId);
-
-              return {
-                carId: String(carId),
-                averageRating:
-                  Number(reviewResponse?.averageRating) || 0,
-                totalReviews:
-                  Number(reviewResponse?.totalReviews) || 0,
-              };
-            } catch (reviewError) {
-              console.error(
-                `Failed to load reviews for ${carId}:`,
-                reviewError,
-              );
-
-              return {
-                carId: String(carId),
-                averageRating: 0,
-                totalReviews: 0,
-              };
-            }
-          }),
-        );
-
-        if (!mounted) {
-          return;
-        }
 
         const reviewMap = {};
 
-        reviewResults.forEach((result) => {
-          if (result?.carId) {
-            reviewMap[result.carId] = {
-              averageRating: result.averageRating,
-              totalReviews: result.totalReviews,
+        availableCars.forEach((car) => {
+          const carId = car?._id || car?.id;
+          if (carId) {
+            reviewMap[String(carId)] = {
+              averageRating: Number(car.averageRating) || 0,
+              totalReviews: Number(car.totalReviews) || 0,
             };
           }
         });
@@ -120,7 +83,7 @@ function FeaturedCars() {
         if (mounted) {
           setError(
             err?.response?.data?.message ||
-              "Unable to load featured cars.",
+              "Unable to load featured cars right now.",
           );
         }
       } finally {
@@ -141,8 +104,13 @@ function FeaturedCars() {
   // RESET CAROUSEL
   // ============================================================
 
+  const prevCarsLengthRef = useRef(cars.length);
+
   useEffect(() => {
-    setCurrentIndex(0);
+    if (prevCarsLengthRef.current !== cars.length) {
+      prevCarsLengthRef.current = cars.length;
+      setCurrentIndex(0);
+    }
   }, [cars.length]);
 
   // ============================================================

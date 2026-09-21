@@ -9,23 +9,28 @@ const {
 } = require("../controllers/authController");
 
 const protect = require("../middleware/authMiddleware");
+const {
+  authLimiter,
+  passwordResetLimiter,
+} = require("../middleware/rateLimitMiddleware");
 
 const router = express.Router();
 
 // REGISTER
 // POST /api/auth/register
 
-router.post("/register", registerUser);
+router.post("/register", authLimiter, registerUser);
 
 // LOGIN
 // POST /api/auth/login
 
-router.post("/login", loginUser);
+router.post("/login", authLimiter, loginUser);
 
 // FORGOT PASSWORD
 // POST /api/auth/forgot-password
 
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", passwordResetLimiter, forgotPassword);
+
 
 // RESET PASSWORD
 // POST /api/auth/reset-password/:token

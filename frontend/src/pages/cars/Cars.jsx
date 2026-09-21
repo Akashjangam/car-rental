@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { getCars } from "../../services/carApi";
-import { getCarReviews } from "../../services/reviewApi";
 
 const API_ORIGIN = (
   import.meta.env.VITE_API_URL || "http://localhost:5000"
@@ -28,7 +27,9 @@ function Cars() {
   const [cars, setCars] = useState([]);
   const [reviews, setReviews] = useState({});
 
-  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [search, setSearch] = useState(
+    () => searchParams.get("search") || searchParams.get("location") || "",
+  );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -73,50 +74,16 @@ function Cars() {
         setCars(carData);
 
         // ========================================================
-        // FETCH REVIEW SUMMARY FOR EVERY CAR
+        // POPULATE REVIEWS FROM PRE-CALCULATED RATINGS
         // ========================================================
-        const reviewResults = await Promise.all(
-          carData.map(async (car) => {
-            const carId = car?._id || car?.id;
-
-            if (!carId) {
-              return null;
-            }
-
-            try {
-              const reviewResponse = await getCarReviews(carId);
-
-              return {
-                carId: String(carId),
-                totalReviews: Number(reviewResponse?.totalReviews) || 0,
-                averageRating: Number(reviewResponse?.averageRating) || 0,
-              };
-            } catch (reviewError) {
-              console.error(
-                `Failed to load reviews for car ${carId}:`,
-                reviewError,
-              );
-
-              return {
-                carId: String(carId),
-                totalReviews: 0,
-                averageRating: 0,
-              };
-            }
-          }),
-        );
-
-        if (!mounted) {
-          return;
-        }
-
         const reviewMap = {};
 
-        reviewResults.forEach((result) => {
-          if (result?.carId) {
-            reviewMap[result.carId] = {
-              totalReviews: result.totalReviews,
-              averageRating: result.averageRating,
+        carData.forEach((car) => {
+          const carId = car?._id || car?.id;
+          if (carId) {
+            reviewMap[String(carId)] = {
+              totalReviews: Number(car.totalReviews) || 0,
+              averageRating: Number(car.averageRating) || 0,
             };
           }
         });
@@ -148,8 +115,17 @@ function Cars() {
   // ============================================================
   // SYNC SEARCH WITH URL
   // ============================================================
+  const prevSearchQueryRef = useRef(
+    searchParams.get("search") || searchParams.get("location") || "",
+  );
+
   useEffect(() => {
-    setSearch(searchParams.get("search") || "");
+    const urlQuery =
+      searchParams.get("search") || searchParams.get("location") || "";
+    if (prevSearchQueryRef.current !== urlQuery) {
+      prevSearchQueryRef.current = urlQuery;
+      setSearch(urlQuery);
+    }
   }, [searchParams]);
 
   // ============================================================
@@ -157,12 +133,22 @@ function Cars() {
   // ============================================================
   const filteredCars = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
 
     return cars.filter((car) => {
+      // --------------------------------------------------------
+      // DATE AVAILABILITY CHECK (from Homepage Search)
+      // --------------------------------------------------------
+      if ((startDateParam || endDateParam) && car?.available === false) {
+        return false;
+      }
+
       // --------------------------------------------------------
       // TEXT SEARCH
       // --------------------------------------------------------
       if (searchValue) {
+
         const searchableText = [
           car?.name,
           car?.brand,
@@ -264,6 +250,7 @@ function Cars() {
     maxPrice,
     minSeats,
     availableOnly,
+    searchParams,
   ]);
 
   // ============================================================
@@ -730,7 +717,17 @@ function FilterField({ label, htmlFor, children }) {
 function CarCard({ car, reviewData }) {
   const carId = car?._id || car?.id;
 
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(() => {
+    if (!carId) return false;
+    try {
+      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
+      return savedCars.some(
+        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
+      );
+    } catch {
+      return false;
+    }
+  });
 
   const image = car?.image || car?.imageUrl || car?.images?.[0] || "";
 
@@ -763,27 +760,6 @@ function CarCard({ car, reviewData }) {
 
   const totalReviews = Number(reviewData?.totalReviews) || 0;
 
-  // ============================================================
-  // LOAD SAVED STATE
-  // ============================================================
-  useEffect(() => {
-    if (!carId) {
-      return;
-    }
-
-    try {
-      const savedCars = JSON.parse(localStorage.getItem("savedCars") || "[]");
-
-      const alreadySaved = savedCars.some(
-        (savedCar) => String(savedCar?._id || savedCar?.id) === String(carId),
-      );
-
-      setIsSaved(alreadySaved);
-    } catch (error) {
-      console.error("Failed to check saved car:", error);
-      setIsSaved(false);
-    }
-  }, [carId]);
 
   // ============================================================
   // TOGGLE SAVED CAR

@@ -1,22 +1,13 @@
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
-const Razorpay = require("razorpay");
 
 const User = require("../models/User");
 const Car = require("../models/Car");
 const Booking = require("../models/Booking");
 const Payment = require("../models/payment");
+const { getRazorpayInstance } = require("../config/razorpay");
 
 const { sendBookingCancellationEmail } = require("../services/emailService");
-
-/* ======================================================
-   RAZORPAY
-====================================================== */
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 /* ======================================================
    ADMIN - DASHBOARD
@@ -30,6 +21,8 @@ const getAdminDashboard = async (req, res) => {
       totalAdmins,
       totalCars,
       totalBookings,
+      pendingBookings,
+      successfulPayments,
       paidBookings,
     ] = await Promise.all([
       User.countDocuments({
@@ -47,6 +40,14 @@ const getAdminDashboard = async (req, res) => {
       Car.countDocuments(),
 
       Booking.countDocuments(),
+
+      Booking.countDocuments({
+        status: "pending",
+      }),
+
+      Booking.countDocuments({
+        paymentStatus: "paid",
+      }),
 
       Booking.find({
         paymentStatus: "paid",
@@ -71,9 +72,12 @@ const getAdminDashboard = async (req, res) => {
         totalAdmins,
         totalCars,
         totalBookings,
+        pendingBookings,
+        successfulPayments,
         totalRevenue,
       },
     });
+
   } catch (error) {
     console.error("Admin dashboard error:", error);
 
@@ -528,6 +532,17 @@ const refundBookingPayment = async (bookingId) => {
 
     console.log("Checking existing Razorpay refunds...");
 
+    let razorpay;
+    try {
+      razorpay = getRazorpayInstance();
+    } catch (configErr) {
+      return {
+        success: false,
+        refunded: false,
+        message: configErr.message || "Razorpay is not configured on the server",
+      };
+    }
+
     try {
       const refundsResponse = await razorpay.payments.fetchMultipleRefund(
         payment.transactionId,
@@ -837,6 +852,16 @@ const syncBookingRefund = async (req, res) => {
     /* ---------------------------------------------
        Get refunds from Razorpay
     --------------------------------------------- */
+
+    let razorpay;
+    try {
+      razorpay = getRazorpayInstance();
+    } catch (configErr) {
+      return res.status(500).json({
+        success: false,
+        message: configErr.message || "Razorpay is not configured on the server.",
+      });
+    }
 
     const refundsResponse = await razorpay.payments.fetchMultipleRefund(
       payment.transactionId,

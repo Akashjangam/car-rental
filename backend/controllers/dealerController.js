@@ -1,6 +1,9 @@
 const Car = require("../models/Car");
 const Booking = require("../models/Booking");
 const Payment = require("../models/payment");
+const { sendBookingCancellationEmail } = require("../services/emailService");
+const { refundBookingPayment } = require("./bookingController");
+
 
 // =====================================================
 // CREATE DEALER CAR
@@ -651,7 +654,10 @@ const updateDealerBookingStatus = async (req, res) => {
     }
 
     // Make sure the car belongs to the logged-in dealer
-    if (booking.car.dealer.toString() !== req.user._id.toString()) {
+    if (
+      !booking.car.dealer ||
+      booking.car.dealer.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to manage this booking.",
@@ -674,10 +680,45 @@ const updateDealerBookingStatus = async (req, res) => {
       });
     }
 
+    // If dealer cancels a paid booking, refund customer payment
+    if (status === "cancelled" && booking.paymentStatus === "paid") {
+      try {
+        await refundBookingPayment(booking);
+      } catch (refundError) {
+        console.error("Dealer booking cancellation refund failed:", refundError);
+        return res.status(400).json({
+          success: false,
+          message:
+            refundError.message ||
+            "Payment refund failed. Booking was not cancelled.",
+          refundFailed: true,
+        });
+      }
+    }
+
     // Update status
     booking.status = status;
 
     await booking.save();
+
+    // Send cancellation email if cancelled
+    if (status === "cancelled") {
+      try {
+        const bookingForEmail = await Booking.findById(booking._id)
+          .populate(
+            "car",
+            "brand model year numberPlate pricePerDay fuelType transmission seats image",
+          )
+          .populate("user", "name email");
+
+        if (bookingForEmail) {
+          await sendBookingCancellationEmail(bookingForEmail);
+        }
+      } catch (emailError) {
+        console.error("Failed to send dealer cancellation email:", emailError);
+      }
+    }
+
 
     // Return updated booking
     const updatedBooking = await Booking.findById(booking._id)
@@ -721,3 +762,4 @@ module.exports = {
   getDealerBookings,
   updateDealerBookingStatus,
 };
+

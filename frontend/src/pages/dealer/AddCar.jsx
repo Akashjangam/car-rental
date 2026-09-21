@@ -60,7 +60,6 @@ function AddCar() {
 
   useEffect(() => {
     if (!image) {
-      setPreviewUrl("");
       return;
     }
 
@@ -69,6 +68,7 @@ function AddCar() {
 
     return () => {
       URL.revokeObjectURL(url);
+      setPreviewUrl("");
     };
   }, [image]);
 
@@ -482,8 +482,11 @@ function FormField({
         onChange={onChange}
         placeholder={placeholder}
         required
-        className="min-h-12 w-full rounded-xl border border-input bg-background px-4 py-3 font-garamond text-base uppercase text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/20"
+        className={`min-h-12 w-full rounded-xl border border-input bg-background px-4 py-3 font-garamond text-base ${
+          name === "numberPlate" ? "uppercase tracking-wider" : ""
+        } text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/20`}
       />
+
     </div>
   );
 }

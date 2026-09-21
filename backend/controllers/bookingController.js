@@ -1,19 +1,9 @@
-const Razorpay = require("razorpay");
-
 const Booking = require("../models/Booking");
 const Car = require("../models/Car");
 const Payment = require("../models/payment");
+const { getRazorpayInstance } = require("../config/razorpay");
 
 const { sendBookingCancellationEmail } = require("../services/emailService");
-
-/* =========================================================
-   RAZORPAY CONFIGURATION
-========================================================= */
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 /* =========================================================
    REFUND BOOKING PAYMENT
@@ -26,11 +16,8 @@ const refundBookingPayment = async (booking) => {
     console.log("Booking ID:", booking._id.toString());
     console.log("========================================");
 
-    /* ---------- Check Razorpay configuration ---------- */
+    const razorpay = getRazorpayInstance();
 
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      throw new Error("Razorpay is not configured on the server");
-    }
 
     /* ---------- Find successful payment ---------- */
 
@@ -368,11 +355,35 @@ const createBooking = async (req, res) => {
 
     /* ---------- Check overlapping bookings ---------- */
 
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+    // Automatically cancel any expired unpaid pending bookings for this vehicle
+    await Booking.updateMany(
+      {
+        car: carId,
+        status: "pending",
+        paymentStatus: "unpaid",
+        createdAt: { $lte: thirtyMinutesAgo },
+      },
+      {
+        $set: { status: "cancelled" },
+      },
+    );
+
     const overlappingBooking = await Booking.findOne({
       car: carId,
       status: {
         $in: ["pending", "confirmed"],
       },
+      $or: [
+        { status: "confirmed" },
+        { status: "pending", paymentStatus: "paid" },
+        {
+          status: "pending",
+          paymentStatus: "unpaid",
+          createdAt: { $gt: thirtyMinutesAgo },
+        },
+      ],
       startDate: {
         $lt: end,
       },
@@ -380,6 +391,7 @@ const createBooking = async (req, res) => {
         $gt: start,
       },
     });
+
 
     if (overlappingBooking) {
       return res.status(409).json({
@@ -754,4 +766,6 @@ module.exports = {
   getMyBookings,
   getBookingById,
   cancelBooking,
+  refundBookingPayment,
 };
+

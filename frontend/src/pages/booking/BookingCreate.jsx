@@ -23,15 +23,6 @@ const API_ORIGIN = (
    HELPERS
 ====================================================== */
 
-function getLocalDateString() {
-  const now = new Date();
-
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
 
 function getLocalDateTimeString(date = new Date()) {
   const year = date.getFullYear();
@@ -72,12 +63,10 @@ function BookingCreate() {
   const [car, setCar] = useState(null);
   const [startDateTime, setStartDateTime] = useState("");
   const [endDateTime, setEndDateTime] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(carId));
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => (carId ? "" : "Invalid car."));
   const [success, setSuccess] = useState("");
-
-  const today = useMemo(() => getLocalDateString(), []);
 
   const minimumStartDateTime = useMemo(() => {
     return getLocalDateTimeString();
@@ -127,12 +116,11 @@ function BookingCreate() {
       }
     };
 
-    if (carId) {
-      loadCar();
-    } else {
-      setLoading(false);
-      setError("Invalid car.");
+    if (!carId) {
+      return;
     }
+
+    loadCar();
 
     return () => {
       mounted = false;

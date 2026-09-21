@@ -71,22 +71,19 @@ function Register() {
       }
 
       // ========================================
-      // SUCCESS ALERT
-      // ========================================
-
-      window.alert(
-        "✓ Account created successfully!\n\nWelcome to DriveNow.",
-      );
-
-      // ========================================
-      // REDIRECT
+      // REDIRECT WITH REGISTRATION SUCCESS STATE
       // ========================================
 
       const redirectPath = location.state?.from || "/";
 
       navigate(redirectPath, {
         replace: true,
+        state: {
+          registrationSuccess:
+            "Account created successfully! Welcome to DriveNow.",
+        },
       });
+
     } catch (err) {
       console.error("Registration error:", err);
 

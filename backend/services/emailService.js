@@ -1095,10 +1095,68 @@ const sendBookingCancellationEmail = async (bookingInput) => {
 };
 
 /* =========================================================
+   SEND PASSWORD RESET EMAIL (BREVO HTTP API)
+========================================================= */
+
+const sendPasswordResetEmail = async (email, resetUrl) => {
+  if (!email || !resetUrl) {
+    throw new Error("Email address and reset URL are required.");
+  }
+
+  try {
+    console.log("========================================");
+    console.log("PASSWORD RESET EMAIL (BREVO)");
+    console.log("Recipient:", email);
+    console.log("Reset URL:", resetUrl);
+    console.log("========================================");
+
+    const content = `
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="font-size: 24px; font-weight: 700; color: #111827; margin: 0 0 10px 0;">Reset Your Password</h2>
+        <p style="font-size: 15px; color: #4b5563; margin: 0; line-height: 1.6;">
+          We received a request to reset the password for your DriveNow account.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${resetUrl}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
+          Reset Password
+        </a>
+      </div>
+
+      <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin-top: 24px;">
+        This password reset link will expire in 15 minutes. If you did not request this, please ignore this email and your password will remain unchanged.
+      </p>
+      <p style="font-size: 12px; color: #9ca3af; word-break: break-all; margin-top: 12px;">
+        If the button above does not work, copy and paste this link into your browser:<br/>
+        <a href="${resetUrl}" style="color: #2563eb;">${resetUrl}</a>
+      </p>
+    `;
+
+    const result = await sendEmail({
+      to: email,
+      subject: "DriveNow - Reset Your Password",
+      html: emailLayout({
+        title: "Reset Your Password",
+        content,
+      }),
+    });
+
+    console.log("PASSWORD RESET EMAIL FINISHED.");
+    return result;
+  } catch (error) {
+    console.error("Password reset email error:", error);
+    throw error;
+  }
+};
+
+/* =========================================================
    EXPORTS
 ========================================================= */
 
 module.exports = {
   sendBookingConfirmationEmail,
   sendBookingCancellationEmail,
+  sendPasswordResetEmail,
 };
+

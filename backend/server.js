@@ -25,26 +25,40 @@ const app = express();
    CORS
 ===================================================== */
 
-const allowedOrigins = [
+const envOrigins = (process.env.CLIENT_URL || process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((url) => url.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+const defaultOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-
-  // Old Vercel URL
+  "http://localhost:4173",
   "https://drivenow-carrental.vercel.app",
-
-  // Current Vercel URL
   "https://drivenow-car-rental-5heb5dpwo-task-manager20.vercel.app",
 ];
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests from Postman, server-to-server, etc.
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
       if (!origin) {
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
+      const normalizedOrigin = origin.replace(/\/+$/, "");
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      // Allow any localhost port during development
+      if (
+        process.env.NODE_ENV !== "production" &&
+        /^http:\/\/localhost:\d+$/.test(origin)
+      ) {
         return callback(null, true);
       }
 
@@ -148,6 +162,45 @@ const completeExpiredBookings = async () => {
 };
 
 /* =====================================================
+   AUTOMATIC EXPIRED PENDING BOOKINGS CANCELLATION
+   Unpaid pending bookings expire after 30 minutes to
+   prevent vehicle lockout.
+===================================================== */
+
+const cancelExpiredPendingBookings = async () => {
+  try {
+    const expirationThreshold = new Date(Date.now() - 30 * 60 * 1000);
+
+    const result = await Booking.updateMany(
+      {
+        status: "pending",
+        paymentStatus: "unpaid",
+        createdAt: {
+          $lte: expirationThreshold,
+        },
+      },
+      {
+        $set: {
+          status: "cancelled",
+        },
+      },
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(
+        `[Booking Job] ${result.modifiedCount} expired unpaid pending booking(s) marked as cancelled.`,
+      );
+    }
+  } catch (error) {
+    console.error(
+      "[Booking Job] Failed to cancel expired pending bookings:",
+      error.message,
+    );
+  }
+};
+
+
+/* =====================================================
    GLOBAL ERROR HANDLER
 ===================================================== */
 
@@ -214,12 +267,17 @@ const startServer = async () => {
     */
 
     await completeExpiredBookings();
+    await cancelExpiredPendingBookings();
 
     /*
       Check every 60 seconds.
     */
 
-    setInterval(completeExpiredBookings, 60 * 1000);
+    setInterval(async () => {
+      await completeExpiredBookings();
+      await cancelExpiredPendingBookings();
+    }, 60 * 1000);
+
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);

@@ -15,19 +15,28 @@ const storage = new CloudinaryStorage({
   },
 });
 
+const path = require("path");
+
 // ========================================
 // FILE FILTER
 // ========================================
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
-  if (allowedTypes.includes(file.mimetype)) {
+  const ext = path.extname(file.originalname || "").toLowerCase();
+
+  if (allowedMimes.includes(file.mimetype) && allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPG, JPEG, PNG and WEBP images are allowed."), false);
+    cb(
+      new Error("Only valid JPG, JPEG, PNG, and WEBP image files are allowed."),
+      false,
+    );
   }
 };
+
 
 // ========================================
 // MULTER

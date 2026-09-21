@@ -58,10 +58,17 @@ const bookingSchema = new mongoose.Schema(
       default: "unpaid",
     },
 
-    // PAYMENT ID
+    // PAYMENT ID (Razorpay payment ID: pay_xxx)
     paymentId: {
       type: String,
       default: "",
+    },
+
+    // PAYMENT DOCUMENT REFERENCE
+    paymentDocId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payment",
+      default: null,
     },
   },
   {
@@ -69,4 +76,12 @@ const bookingSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model("Booking", bookingSchema);
+// Compound index to optimize booking availability and overlap queries
+bookingSchema.index({
+  car: 1,
+  status: 1,
+  startDate: 1,
+  endDate: 1,
+});
+
+module.exports = mongoose.model("Booking", bookingSchema);

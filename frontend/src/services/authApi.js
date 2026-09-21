@@ -30,3 +30,22 @@ export const getProfile = async (token) => {
 
   return response.data;
 };
+
+/**
+ * Request password reset email
+ */
+export const forgotPassword = async (email) => {
+  const response = await api.post("/auth/forgot-password", { email });
+
+  return response.data;
+};
+
+/**
+ * Reset password with token
+ */
+export const resetPassword = async (token, password) => {
+  const response = await api.post(`/auth/reset-password/${token}`, { password });
+
+  return response.data;
+};
+

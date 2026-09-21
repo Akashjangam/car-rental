@@ -4,7 +4,7 @@ import { ArrowLeft, Car, Lock, CheckCircle2 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import api from "../services/api";
+import { resetPassword } from "../services/authApi";
 
 function ResetPassword() {
   const { token } = useParams();
@@ -45,21 +45,17 @@ function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await api.post(
-        `/auth/reset-password/${token}`,
-        {
-          password,
-        },
-      );
+      const data = await resetPassword(token, password);
 
-      if (response.data?.success) {
+      if (data?.success) {
         setSuccess(true);
       } else {
         setError(
-          response.data?.message ||
+          data?.message ||
             "Unable to reset your password. Please try again.",
         );
       }
+
     } catch (err) {
       console.error("Reset password error:", err);
 

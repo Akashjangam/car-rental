@@ -18,8 +18,6 @@ function Home() {
   useEffect(() => {
     if (!registrationSuccess) return;
 
-    setShowAlert(true);
-
     const timer = setTimeout(() => {
       setShowAlert(false);
     }, 4000);
