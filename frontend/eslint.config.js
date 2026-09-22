@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'

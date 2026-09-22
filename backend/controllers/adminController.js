@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 

@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 import { Search, CalendarDays, Car, CreditCard } from "lucide-react";
 
 const steps = [

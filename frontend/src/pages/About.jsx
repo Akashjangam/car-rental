@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 function About() {
   return (
     <main className="bg-background">

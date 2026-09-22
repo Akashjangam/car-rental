@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 require("dotenv").config();
 
 const nodemailer = require("nodemailer");

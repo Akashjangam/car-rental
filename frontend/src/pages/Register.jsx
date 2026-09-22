@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Car, CheckCircle2 } from "lucide-react";

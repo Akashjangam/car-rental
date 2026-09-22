@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");

@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 const Booking = require("../models/Booking");
 const Car = require("../models/Car");
 const Payment = require("../models/payment");

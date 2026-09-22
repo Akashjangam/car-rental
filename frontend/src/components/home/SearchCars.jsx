@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, CalendarDays, ArrowRight } from "lucide-react";

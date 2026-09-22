@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 const Car = require("../models/Car");
 const Review = require("../models/Review");
 const mongoose = require("mongoose");

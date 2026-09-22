@@ -1,3 +1,4 @@
+// DriveNow Car Rental — MERN Stack Project
 import { createContext, useContext, useEffect, useState } from "react";
 
 import { registerUser, loginUser, getProfile } from "../services/authApi";
