@@ -26,30 +26,36 @@ const app = express();
    CORS
 ===================================================== */
 
-const envOrigins = (process.env.CLIENT_URL || process.env.FRONTEND_URL || "")
-  .split(",")
-  .map((url) => url.trim().replace(/\/+$/, ""))
+const envOrigins = [process.env.CLIENT_URL, process.env.FRONTEND_URL]
+  .filter(Boolean)
+  .flatMap((urlStr) => urlStr.split(","))
+  .map((url) => url.trim().replace(/^["']|["']$/g, "").replace(/\/+$/, ""))
   .filter(Boolean);
 
 const defaultOrigins = [
+  "https://drivenow-carrental.vercel.app",
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:4173",
-  "https://drivenow-carrental.vercel.app",
-  "https://drivenow-car-rental-5heb5dpwo-task-manager20.vercel.app",
 ];
 
-const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+const allowedOrigins = Array.from(
+  new Set(
+    [...defaultOrigins, ...envOrigins]
+      .map((url) => url.trim().replace(/\/+$/, ""))
+      .filter(Boolean),
+  ),
+);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server, Render health checks)
       if (!origin) {
         return callback(null, true);
       }
 
-      const normalizedOrigin = origin.replace(/\/+$/, "");
+      const normalizedOrigin = origin.trim().replace(/\/+$/, "");
 
       if (allowedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
@@ -58,7 +64,7 @@ app.use(
       // Allow any localhost port during development
       if (
         process.env.NODE_ENV !== "production" &&
-        /^http:\/\/localhost:\d+$/.test(origin)
+        /^http:\/\/localhost:\d+$/.test(normalizedOrigin)
       ) {
         return callback(null, true);
       }
@@ -72,9 +78,17 @@ app.use(
 
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+    ],
+
+    optionsSuccessStatus: 200,
   }),
 );
+
 
 /* =====================================================
    BODY PARSING
